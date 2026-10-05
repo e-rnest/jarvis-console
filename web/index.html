@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jarvis</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <script src="/assets/app.js" defer></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="header">
+      <div>
+        <p class="eyebrow">Home services</p>
+        <h1>Jarvis</h1>
+        <p id="refresh-state" class="refresh-state" aria-live="polite">Waiting for status</p>
+      </div>
+      <button id="refresh" class="refresh-button" type="button">Refresh</button>
+    </header>
+    <section id="services" class="service-grid" aria-label="Service status"></section>
+    <noscript>JavaScript is required to load current service status.</noscript>
+  </main>
+</body>
+</html>

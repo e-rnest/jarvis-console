@@ -1,0 +1,42 @@
+name: jarvis-console
+
+services:
+  jarvis-console:
+    build: .
+    container_name: jarvis-console
+    hostname: jarvis-console
+    restart: unless-stopped
+    init: true
+    environment:
+      HTTP_PORT: "8080"
+      STATUS_TIMEOUT_SECONDS: ${STATUS_TIMEOUT_SECONDS:-2}
+      RECEIPT_STATUS_URL: ${RECEIPT_STATUS_URL:-http://receipt-service:8080/health}
+      RECEIPT_LAUNCH_URL: ${RECEIPT_LAUNCH_URL:-http://receipt.jarvis.home/}
+      LABEL_STATUS_URL: ${LABEL_STATUS_URL:-http://jarvis.home:5050/health}
+      LABEL_LAUNCH_URL: ${LABEL_LAUNCH_URL:-http://label.jarvis.home/print}
+      JEOPARDY_STATUS_URL: ${JEOPARDY_STATUS_URL:-http://jeopardy-service:8080/health}
+      JEOPARDY_LAUNCH_URL: ${JEOPARDY_LAUNCH_URL:-http://jeopardy.home/}
+      TRIVIAROM_STATUS_URL: ${TRIVIAROM_STATUS_URL:-http://triviarom-service:8080/health}
+      TRIVIAROM_LAUNCH_URL: ${TRIVIAROM_LAUNCH_URL:-http://jarvis.home:8790/}
+      JELLYFIN_LAUNCH_URL: ${JELLYFIN_LAUNCH_URL:-http://jellyfin.jarvis.home/}
+    ports:
+      - "${LAN_BIND_IP:-192.168.1.100}:${CONSOLE_HOST_PORT:-8791}:8080"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=3).read()"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    networks:
+      - default
+      - jarvis-receipt-services
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+networks:
+  jarvis-receipt-services:
+    external: true
+    name: jarvis-receipt-services
