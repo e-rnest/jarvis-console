@@ -43,7 +43,7 @@ def fetch_json(url: str, timeout: float) -> tuple[int, dict]:
 
 
 def result(key: str, name: str, status: str, summary: str,
-           launch_url: str, details: dict | None = None) -> dict:
+           launch_url: str | None, details: dict | None = None) -> dict:
     document = {
         "key": key,
         "name": name,

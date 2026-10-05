@@ -1,9 +1,9 @@
 # Jarvis Console
 
 Jarvis Console is the small, read-only front door for the Jarvis home-service
-ecosystem. Milestone 1 reports accepted service health contracts and provides
-browser-reachable launch links. It does not administer Docker, mutate service
-state, or print anything.
+ecosystem. It reports accepted service health contracts, provides useful
+browser-reachable launch links, and exposes one deliberately guarded physical
+action: printing a Morning Brief through Receipt Service.
 
 ## Architecture
 
@@ -23,9 +23,15 @@ or API output.
 - `GET /health` reports only the Console process. Downstream failures do not
   make this endpoint unhealthy.
 - `GET /api/status` returns a timestamped list of normalized service results.
+- `POST /api/actions/morning-brief` forwards exactly one non-retried request to
+  Receipt Service while holding a process-local in-flight guard.
 - `GET /`, `/assets/app.css`, and `/assets/app.js` serve the dashboard.
 
-There are no action endpoints in Milestone 1.
+The Morning Brief endpoint accepts no body. It reports success only when Receipt
+returns its accepted response, reports known rejections as failures, and treats
+timeouts, connection loss, and unrecognized post-dispatch responses as uncertain.
+An uncertain result instructs the user to inspect the physical printer before
+trying again. Console never retries the request automatically.
 
 ## Status semantics
 
@@ -50,8 +56,9 @@ Internal status targets and browser launch URLs are separate settings:
 | `HTTP_HOST` | `0.0.0.0` |
 | `HTTP_PORT` | `8080` |
 | `STATUS_TIMEOUT_SECONDS` | `2` |
+| `MORNING_BRIEF_URL` | `http://receipt-service:8080/print/morning` |
+| `MORNING_BRIEF_TIMEOUT_SECONDS` | `300` |
 | `RECEIPT_STATUS_URL` | `http://receipt-service:8080/health` |
-| `RECEIPT_LAUNCH_URL` | `http://receipt.jarvis.home/` |
 | `LABEL_STATUS_URL` | `http://jarvis.home:5050/health` |
 | `LABEL_LAUNCH_URL` | `http://label.jarvis.home/print` |
 | `JEOPARDY_STATUS_URL` | `http://jeopardy-service:8080/health` |
@@ -60,8 +67,9 @@ Internal status targets and browser launch URLs are separate settings:
 | `TRIVIAROM_LAUNCH_URL` | `http://jarvis.home:8790/` |
 | `JELLYFIN_LAUNCH_URL` | `http://jellyfin.jarvis.home/` |
 
-`STATUS_TIMEOUT_SECONDS` must be between 0.1 and 10 seconds. Status URLs must
-not contain credentials, fragments, or query strings.
+`STATUS_TIMEOUT_SECONDS` must be between 0.1 and 10 seconds, and the Morning
+Brief timeout must be between 0.1 and 600 seconds. Service URLs must not contain
+credentials, fragments, or query strings.
 
 ## Development and tests
 
@@ -105,5 +113,6 @@ exposed outside the trusted home LAN. No deployment is part of Milestone 1.
 - Receipt health does not probe printers or upstream content services.
 - Receipt provides configured scheduler time and durable prior-attempt state,
   but not a calculated next-run timestamp.
-- There are no print or other mutation controls. A deliberate, no-retry Morning
-  Brief action is reserved for a later milestone.
+- The Morning Brief guard is intentionally process-local and does not claim
+  persistent or cross-instance idempotency. Receipt Service remains the physical
+  print authority, and an ambiguous transport result requires human inspection.

@@ -48,14 +48,51 @@ function renderCard(service) {
     const details = element("dl", "details");
     addDetail(details, "Playable", service.details.playable_record_count.toLocaleString());
     addDetail(details, "Archive", service.details.record_count.toLocaleString());
-    addDetail(details, "Packs", service.details.dataset_count.toLocaleString());
+    addDetail(details, "Datasets", service.details.dataset_count.toLocaleString());
     card.append(details);
   }
 
-  const launch = element("a", "launch", "Launch");
-  launch.href = service.launch_url;
-  card.append(launch);
+  if (service.key === "receipt") {
+    const action = element("button", "print-button", "Print Morning Brief");
+    action.type = "button";
+    const actionResult = element("p", "action-result");
+    action.addEventListener("click", () => printMorningBrief(action, actionResult));
+    card.append(action, actionResult);
+  } else {
+    const launch = element("a", "launch", "Launch");
+    launch.href = service.launch_url;
+    card.append(launch);
+  }
   return card;
+}
+
+async function printMorningBrief(button, output) {
+  const confirmed = window.confirm(
+    "Print one Morning Brief now? This will produce physical paper output.",
+  );
+  if (!confirmed) return;
+
+  button.disabled = true;
+  output.className = "action-result pending";
+  output.textContent = "Sending one print request…";
+  try {
+    const response = await fetch("/api/actions/morning-brief", {
+      method: "POST",
+      cache: "no-store",
+    });
+    const result = await response.json();
+    if (!result || typeof result.outcome !== "string" || typeof result.message !== "string") {
+      throw new Error("Console returned an invalid action result");
+    }
+    output.className = `action-result ${result.outcome}`;
+    output.textContent = result.message;
+  } catch (error) {
+    output.className = "action-result uncertain";
+    output.textContent =
+      "The Console response was lost. Check the physical printer before trying again.";
+  } finally {
+    button.disabled = false;
+  }
 }
 
 function showLoadingCards() {

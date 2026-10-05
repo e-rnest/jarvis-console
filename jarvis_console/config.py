@@ -12,7 +12,7 @@ class ServiceConfig:
     key: str
     name: str
     status_url: str | None
-    launch_url: str
+    launch_url: str | None
 
 
 @dataclass(frozen=True)
@@ -20,6 +20,8 @@ class Config:
     host: str
     port: int
     timeout_seconds: float
+    morning_brief_url: str
+    morning_brief_timeout_seconds: float
     services: tuple[ServiceConfig, ...]
 
 
@@ -44,18 +46,25 @@ def load_config() -> Config:
     try:
         port = int(os.environ.get("HTTP_PORT", "8080"))
         timeout = float(os.environ.get("STATUS_TIMEOUT_SECONDS", "2"))
+        morning_timeout = float(os.environ.get("MORNING_BRIEF_TIMEOUT_SECONDS", "300"))
     except ValueError as exc:
-        raise ValueError("HTTP_PORT and STATUS_TIMEOUT_SECONDS must be numeric") from exc
+        raise ValueError("HTTP_PORT and timeout settings must be numeric") from exc
     if not 1 <= port <= 65535:
         raise ValueError("HTTP_PORT must be between 1 and 65535")
     if not 0.1 <= timeout <= 10:
         raise ValueError("STATUS_TIMEOUT_SECONDS must be between 0.1 and 10")
+    if not 0.1 <= morning_timeout <= 600:
+        raise ValueError("MORNING_BRIEF_TIMEOUT_SECONDS must be between 0.1 and 600")
+
+    morning_brief_url = _status_url(
+        "MORNING_BRIEF_URL", "http://receipt-service:8080/print/morning"
+    )
 
     services = (
         ServiceConfig(
             "receipt", "Receipt",
             _status_url("RECEIPT_STATUS_URL", "http://receipt-service:8080/health"),
-            _url("RECEIPT_LAUNCH_URL", "http://receipt.jarvis.home/"),
+            None,
         ),
         ServiceConfig(
             "label", "Label",
@@ -77,4 +86,7 @@ def load_config() -> Config:
             _url("JELLYFIN_LAUNCH_URL", "http://jellyfin.jarvis.home/"),
         ),
     )
-    return Config(os.environ.get("HTTP_HOST", "0.0.0.0"), port, timeout, services)
+    return Config(
+        os.environ.get("HTTP_HOST", "0.0.0.0"), port, timeout,
+        morning_brief_url, morning_timeout, services,
+    )

@@ -10,6 +10,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from . import __version__
+from .actions import MorningBriefAction
 from .config import Config
 from .status import aggregate
 
@@ -31,6 +32,9 @@ class ConsoleServer(ThreadingHTTPServer):
         super().__init__(address, ConsoleHandler)
         self.config = config
         self.web_root = web_root
+        self.morning_brief_action = MorningBriefAction(
+            config.morning_brief_url, config.morning_brief_timeout_seconds
+        )
 
 
 class ConsoleHandler(BaseHTTPRequestHandler):
@@ -79,7 +83,18 @@ class ConsoleHandler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.NOT_FOUND, {"error": "Not found"})
 
     def do_POST(self) -> None:
-        self._json(HTTPStatus.NOT_FOUND, {"error": "Not found"})
+        url = urlsplit(self.path)
+        if url.path != "/api/actions/morning-brief" or url.query:
+            self._json(HTTPStatus.NOT_FOUND, {"error": "Not found"})
+            return
+        if (self.headers.get("Transfer-Encoding")
+                or self.headers.get("Content-Length", "0") != "0"):
+            self._json(HTTPStatus.BAD_REQUEST, {
+                "outcome": "failed", "message": "This action takes no request body.",
+            })
+            return
+        status, payload = self.server.morning_brief_action.perform()
+        self._json(HTTPStatus(status), payload)
 
     def log_message(self, format: str, *args: object) -> None:
         LOG.info("http client=%s %s", self.client_address[0], format % args)

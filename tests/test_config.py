@@ -18,7 +18,16 @@ class ConfigTests(unittest.TestCase):
                          "http://triviarom-service:8080/health")
         self.assertEqual(services["triviarom"].launch_url,
                          "http://jarvis.home:8790/")
+        self.assertIsNone(services["receipt"].launch_url)
         self.assertIsNone(services["jellyfin"].status_url)
+        self.assertEqual(config.morning_brief_url,
+                         "http://receipt-service:8080/print/morning")
+        self.assertEqual(services["label"].launch_url,
+                         "http://label.jarvis.home/print")
+        self.assertEqual(services["jeopardy"].launch_url,
+                         "http://jeopardy.home/")
+        self.assertEqual(services["jellyfin"].launch_url,
+                         "http://jellyfin.jarvis.home/")
 
     def test_invalid_timeout_is_rejected(self):
         with patch.dict(os.environ, {"STATUS_TIMEOUT_SECONDS": "60"}, clear=True):
@@ -31,6 +40,8 @@ class ConfigTests(unittest.TestCase):
         self.assertIn("  jarvis-console:\n", compose)
         self.assertIn("    container_name: jarvis-console\n", compose)
         self.assertIn('${CONSOLE_HOST_PORT:-8791}:8080', compose)
+        self.assertIn("MORNING_BRIEF_URL: ${MORNING_BRIEF_URL:-http://receipt-service:8080/print/morning}",
+                      compose)
         self.assertIn("    external: true\n    name: jarvis-receipt-services\n", compose)
         self.assertNotIn("depends_on", compose)
 
