@@ -79,7 +79,7 @@ def load_config() -> Config:
         ServiceConfig(
             "triviarom", "TriviaROM",
             _status_url("TRIVIAROM_STATUS_URL", "http://triviarom-service:8080/health"),
-            _url("TRIVIAROM_LAUNCH_URL", "http://jarvis.home:8790/"),
+            _url("TRIVIAROM_LAUNCH_URL", "http://trivia.jarvis.home/"),
         ),
         ServiceConfig(
             "jellyfin", "Jellyfin", None,
