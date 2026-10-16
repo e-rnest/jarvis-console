@@ -5,6 +5,18 @@ ecosystem. It reports accepted service health contracts, provides useful
 browser-reachable launch links, and exposes one deliberately guarded physical
 action: printing a Morning Brief through Receipt Service.
 
+## Access
+
+On the trusted home LAN, open Jarvis Console at:
+
+- Preferred: [http://console.jarvis.home/](http://console.jarvis.home/)
+- Direct hostname and published port: [http://jarvis.home:8791/](http://jarvis.home:8791/)
+- Direct IP and published port: [http://192.168.1.100:8791/](http://192.168.1.100:8791/)
+
+The preferred URL is provided by local DNS and the Synology reverse proxy. This
+repository packages the Console application but does not manage those external
+DNS or reverse-proxy settings.
+
 ## Architecture
 
 The application is a Python 3.12 standard-library HTTP server with static HTML,
@@ -64,7 +76,7 @@ Internal status targets and browser launch URLs are separate settings:
 | `JEOPARDY_STATUS_URL` | `http://jeopardy-service:8080/health` |
 | `JEOPARDY_LAUNCH_URL` | `http://jeopardy.home/` |
 | `TRIVIAROM_STATUS_URL` | `http://triviarom-service:8080/health` |
-| `TRIVIAROM_LAUNCH_URL` | `http://jarvis.home:8790/` |
+| `TRIVIAROM_LAUNCH_URL` | `http://trivia.jarvis.home/` |
 | `JELLYFIN_LAUNCH_URL` | `http://jellyfin.jarvis.home/` |
 
 `STATUS_TIMEOUT_SECONDS` must be between 0.1 and 10 seconds, and the Morning
@@ -89,21 +101,20 @@ git diff --check
 
 Tests use local fake HTTP servers and never contact live Jarvis services.
 
-## Docker and eventual deployment
+## Docker and deployment
 
 `compose.yaml` packages Console as `jarvis-console`, joins the existing external
 `jarvis-receipt-services` network, and has no cross-project `depends_on` links.
-The candidate host port is configurable with `CONSOLE_HOST_PORT` and defaults to
-8791. Port availability must be verified on Jarvis before any deployment.
+The published host port is configurable with `CONSOLE_HOST_PORT` and defaults to
+8791. The deployed service is reachable directly through that port and through
+the preferred `http://console.jarvis.home/` reverse-proxy URL.
 
 The Compose configuration assumes `jarvis-receipt-services` already exists and
 that `jarvis.home:5050` remains reachable from the container for Label status,
-matching Receipt Service's accepted integration route. A later, separately
-approved task may configure `http://jarvis.home/` through Synology's reverse
-proxy and local DNS.
+matching Receipt Service's accepted integration route.
 
 This repository does not configure DNS or the reverse proxy and must not be
-exposed outside the trusted home LAN. No deployment is part of Milestone 1.
+exposed outside the trusted home LAN.
 
 ## Known limitations
 

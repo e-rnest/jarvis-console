@@ -17,7 +17,7 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(services["triviarom"].status_url,
                          "http://triviarom-service:8080/health")
         self.assertEqual(services["triviarom"].launch_url,
-                         "http://jarvis.home:8790/")
+                         "http://trivia.jarvis.home/")
         self.assertIsNone(services["receipt"].launch_url)
         self.assertIsNone(services["jellyfin"].status_url)
         self.assertEqual(config.morning_brief_url,
