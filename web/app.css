@@ -188,6 +188,16 @@ h1 {
   color: var(--accent);
 }
 
+.card-actions {
+  display: flex;
+  margin-top: auto;
+  flex-wrap: wrap;
+  gap: .55rem;
+}
+
+.card-actions .launch { margin-top: 0; }
+.launch.secondary { background: transparent; border: 1px solid var(--line); }
+
 .print-button { border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent); }
 
 .action-result {

@@ -13,6 +13,7 @@ class ServiceConfig:
     name: str
     status_url: str | None
     launch_url: str | None
+    secondary_links: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -29,16 +30,16 @@ def _url(name: str, default: str) -> str:
     value = os.environ.get(name, default)
     parsed = urlsplit(value)
     if (parsed.scheme not in {"http", "https"} or not parsed.hostname
-            or parsed.username or parsed.password or parsed.fragment):
-        raise ValueError(f"{name} must be an HTTP(S) URL without credentials or a fragment")
+            or parsed.username or parsed.password):
+        raise ValueError(f"{name} must be an HTTP(S) URL without credentials")
     return value
 
 
 def _status_url(name: str, default: str) -> str:
     value = _url(name, default)
     parsed = urlsplit(value)
-    if parsed.query:
-        raise ValueError(f"{name} must not contain a query string")
+    if parsed.query or parsed.fragment:
+        raise ValueError(f"{name} must not contain a query string or fragment")
     return value
 
 
@@ -88,7 +89,11 @@ def load_config() -> Config:
         ),
         ServiceConfig(
             "jellyfin", "Jellyfin", None,
-            _url("JELLYFIN_LAUNCH_URL", "http://jellyfin.jarvis.home/"),
+            _url("JELLYFIN_LAUNCH_URL", "http://jellyfin.home"),
+            (("TV Guide", _url(
+                "JELLYFIN_TV_GUIDE_URL",
+                "http://jellyfin.home/web/#/livetv?collectionType=livetv&tab=1",
+            )),),
         ),
     )
     return Config(

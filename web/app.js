@@ -59,9 +59,16 @@ function renderCard(service) {
     action.addEventListener("click", () => printMorningBrief(action, actionResult));
     card.append(action, actionResult);
   } else {
+    const actions = element("div", "card-actions");
     const launch = element("a", "launch", "Launch");
     launch.href = service.launch_url;
-    card.append(launch);
+    actions.append(launch);
+    for (const link of service.secondary_links || []) {
+      const secondary = element("a", "launch secondary", link.label);
+      secondary.href = link.url;
+      actions.append(secondary);
+    }
+    card.append(actions);
   }
   return card;
 }

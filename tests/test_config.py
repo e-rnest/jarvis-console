@@ -31,7 +31,11 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(services["blacktorrent"].launch_url,
                          "http://192.168.1.100:8080/")
         self.assertEqual(services["jellyfin"].launch_url,
-                         "http://jellyfin.jarvis.home/")
+                         "http://jellyfin.home")
+        self.assertEqual(services["jellyfin"].secondary_links, ((
+            "TV Guide",
+            "http://jellyfin.home/web/#/livetv?collectionType=livetv&tab=1",
+        ),))
 
     def test_invalid_timeout_is_rejected(self):
         with patch.dict(os.environ, {"STATUS_TIMEOUT_SECONDS": "60"}, clear=True):
@@ -47,6 +51,8 @@ class ConfigTests(unittest.TestCase):
         self.assertIn("MORNING_BRIEF_URL: ${MORNING_BRIEF_URL:-http://receipt-service:8080/print/morning}",
                       compose)
         self.assertIn("BLACKTORRENT_STATUS_URL: ${BLACKTORRENT_STATUS_URL:-http://192.168.1.100:8080/}",
+                      compose)
+        self.assertIn("JELLYFIN_TV_GUIDE_URL: ${JELLYFIN_TV_GUIDE_URL:-http://jellyfin.home/web/#/livetv?collectionType=livetv&tab=1}",
                       compose)
         self.assertIn("    external: true\n    name: jarvis-receipt-services\n", compose)
         self.assertNotIn("depends_on", compose)

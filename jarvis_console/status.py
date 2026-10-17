@@ -19,8 +19,19 @@ ADAPTERS = {
 
 
 def _unexpected(config: ServiceConfig) -> dict:
-    return result(config.key, config.name, "unknown",
-                  "Status check failed unexpectedly", config.launch_url)
+    return _with_secondary_links(config, result(
+        config.key, config.name, "unknown",
+        "Status check failed unexpectedly", config.launch_url,
+    ))
+
+
+def _with_secondary_links(config: ServiceConfig, service: dict) -> dict:
+    if config.secondary_links:
+        service["secondary_links"] = [
+            {"label": label, "url": url}
+            for label, url in config.secondary_links
+        ]
+    return service
 
 
 def aggregate(config: Config) -> dict:
@@ -34,16 +45,16 @@ def aggregate(config: Config) -> dict:
         for future in as_completed(futures):
             service = futures[future]
             try:
-                services[service.key] = future.result()
+                services[service.key] = _with_secondary_links(service, future.result())
             except Exception:
                 services[service.key] = _unexpected(service)
 
     for service in config.services:
         if service.status_url is None:
-            services[service.key] = result(
+            services[service.key] = _with_secondary_links(service, result(
                 service.key, service.name, "unavailable",
                 "Health status is not available", service.launch_url,
-            )
+            ))
     ordered = [services[service.key] for service in config.services]
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),

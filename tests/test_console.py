@@ -120,7 +120,10 @@ def configuration(base_url: str, timeout: float = 0.25,
         ServiceConfig("triviarom", "TriviaROM", f"{base_url}/trivia", "http://launch/trivia"),
         ServiceConfig("blacktorrent", "BlackTorrent", f"{base_url}/blacktorrent",
                       "http://launch/blacktorrent"),
-        ServiceConfig("jellyfin", "Jellyfin", None, "http://launch/jellyfin"),
+        ServiceConfig(
+            "jellyfin", "Jellyfin", None, "http://launch/jellyfin",
+            (("TV Guide", "http://launch/jellyfin/tv"),),
+        ),
     ))
 
 
@@ -270,6 +273,10 @@ class AggregationTests(unittest.TestCase):
         with fake_downstreams(responses) as (base, downstream):
             statuses = by_key(aggregate(configuration(base)))
         self.assertEqual(statuses["jellyfin"]["status"], "unavailable")
+        self.assertEqual(statuses["jellyfin"]["launch_url"], "http://launch/jellyfin")
+        self.assertEqual(statuses["jellyfin"]["secondary_links"], [
+            {"label": "TV Guide", "url": "http://launch/jellyfin/tv"},
+        ])
         self.assertEqual(set(responses), {"/receipt", "/label", "/jeopardy", "/trivia",
                                           "/blacktorrent"})
         self.assertEqual(downstream.post_paths, [])
@@ -325,6 +332,8 @@ class ConsoleHTTPTests(unittest.TestCase):
         self.assertNotIn('addDetail(details, "Packs"', script)
         self.assertIn('if (service.key === "receipt")', script)
         self.assertIn('"BlackTorrent"', script)
+        self.assertIn('"card-actions"', script)
+        self.assertIn("service.secondary_links", script)
         self.assertIn("@media (max-width: 620px)", styles)
         for hostname in ("receipt-service", "jeopardy-service", "triviarom-service"):
             self.assertNotIn(hostname, combined)

@@ -80,11 +80,13 @@ Internal status targets and browser launch URLs are separate settings:
 | `TRIVIAROM_LAUNCH_URL` | `http://trivia.jarvis.home/` |
 | `BLACKTORRENT_STATUS_URL` | `http://192.168.1.100:8080/` |
 | `BLACKTORRENT_LAUNCH_URL` | `http://192.168.1.100:8080/` |
-| `JELLYFIN_LAUNCH_URL` | `http://jellyfin.jarvis.home/` |
+| `JELLYFIN_LAUNCH_URL` | `http://jellyfin.home` |
+| `JELLYFIN_TV_GUIDE_URL` | `http://jellyfin.home/web/#/livetv?collectionType=livetv&tab=1` |
 
 `STATUS_TIMEOUT_SECONDS` must be between 0.1 and 10 seconds, and the Morning
-Brief timeout must be between 0.1 and 600 seconds. Service URLs must not contain
-credentials, fragments, or query strings.
+Brief timeout must be between 0.1 and 600 seconds. URLs must not contain
+credentials. Backend status URLs additionally reject query strings and
+fragments; browser launch links may use them for application deep links.
 
 ## Development and tests
 
