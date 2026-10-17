@@ -118,6 +118,8 @@ def configuration(base_url: str, timeout: float = 0.25,
         ServiceConfig("label", "Label", f"{base_url}/label", "http://launch/label"),
         ServiceConfig("jeopardy", "Jeopardy", f"{base_url}/jeopardy", "http://launch/jeopardy"),
         ServiceConfig("triviarom", "TriviaROM", f"{base_url}/trivia", "http://launch/trivia"),
+        ServiceConfig("blacktorrent", "BlackTorrent", f"{base_url}/blacktorrent",
+                      "http://launch/blacktorrent"),
         ServiceConfig("jellyfin", "Jellyfin", None, "http://launch/jellyfin"),
     ))
 
@@ -128,6 +130,7 @@ def healthy_responses():
         "/label": (200, {"status": "ok"}, 0),
         "/jeopardy": (200, {"status": "ok"}, 0),
         "/trivia": (200, TRIVIA_OK, 0),
+        "/blacktorrent": (200, b"<html>qBittorrent</html>", 0),
     }
 
 
@@ -142,7 +145,8 @@ class AggregationTests(unittest.TestCase):
         self.assertEqual(
             {key: value["status"] for key, value in statuses.items()},
             {"receipt": "healthy", "label": "healthy", "jeopardy": "healthy",
-             "triviarom": "healthy", "jellyfin": "unavailable"},
+             "triviarom": "healthy", "blacktorrent": "healthy",
+             "jellyfin": "unavailable"},
         )
         self.assertIsNone(statuses["receipt"]["launch_url"])
 
@@ -198,6 +202,22 @@ class AggregationTests(unittest.TestCase):
             "playable_record_count": 137173,
         })
 
+    def test_blacktorrent_webui_reachability_is_healthy(self):
+        with fake_downstreams(healthy_responses()) as (base, _):
+            blacktorrent = by_key(aggregate(configuration(base)))["blacktorrent"]
+        self.assertEqual(blacktorrent["status"], "healthy")
+        self.assertEqual(blacktorrent["summary"], "qBittorrent WebUI reachable")
+        self.assertEqual(blacktorrent["launch_url"], "http://launch/blacktorrent")
+
+    def test_blacktorrent_http_error_is_unknown_not_failed(self):
+        responses = healthy_responses()
+        responses["/blacktorrent"] = (503, b"unavailable", 0)
+        with fake_downstreams(responses) as (base, _):
+            blacktorrent = by_key(aggregate(configuration(base)))["blacktorrent"]
+        self.assertEqual(blacktorrent["status"], "unknown")
+        self.assertEqual(blacktorrent["summary"],
+                         "qBittorrent WebUI returned HTTP 503")
+
     def test_malformed_json_is_unknown_without_suppressing_peers(self):
         responses = healthy_responses()
         responses["/label"] = (200, b"not-json", 0)
@@ -221,7 +241,8 @@ class AggregationTests(unittest.TestCase):
         config = configuration(f"http://127.0.0.1:{unused_port}", timeout=0.1)
         statuses = by_key(aggregate(config))
         self.assertTrue(all(statuses[key]["status"] == "unknown"
-                            for key in ("receipt", "label", "jeopardy", "triviarom")))
+                            for key in ("receipt", "label", "jeopardy", "triviarom",
+                                        "blacktorrent")))
 
     def test_timeout_is_unknown(self):
         responses = healthy_responses()
@@ -241,14 +262,16 @@ class AggregationTests(unittest.TestCase):
             elapsed = time.monotonic() - started
         self.assertLess(elapsed, 0.28)
         self.assertTrue(all(statuses[key]["status"] == "unknown"
-                            for key in ("receipt", "label", "jeopardy", "triviarom")))
+                            for key in ("receipt", "label", "jeopardy", "triviarom",
+                                        "blacktorrent")))
 
     def test_jellyfin_makes_no_health_request(self):
         responses = healthy_responses()
         with fake_downstreams(responses) as (base, downstream):
             statuses = by_key(aggregate(configuration(base)))
         self.assertEqual(statuses["jellyfin"]["status"], "unavailable")
-        self.assertEqual(set(responses), {"/receipt", "/label", "/jeopardy", "/trivia"})
+        self.assertEqual(set(responses), {"/receipt", "/label", "/jeopardy", "/trivia",
+                                          "/blacktorrent"})
         self.assertEqual(downstream.post_paths, [])
 
 
@@ -301,6 +324,7 @@ class ConsoleHTTPTests(unittest.TestCase):
         self.assertIn('addDetail(details, "Datasets"', script)
         self.assertNotIn('addDetail(details, "Packs"', script)
         self.assertIn('if (service.key === "receipt")', script)
+        self.assertIn('"BlackTorrent"', script)
         self.assertIn("@media (max-width: 620px)", styles)
         for hostname in ("receipt-service", "jeopardy-service", "triviarom-service"):
             self.assertNotIn(hostname, combined)

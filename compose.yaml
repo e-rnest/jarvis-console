@@ -19,6 +19,8 @@ services:
       JEOPARDY_LAUNCH_URL: ${JEOPARDY_LAUNCH_URL:-http://jeopardy.home/}
       TRIVIAROM_STATUS_URL: ${TRIVIAROM_STATUS_URL:-http://triviarom-service:8080/health}
       TRIVIAROM_LAUNCH_URL: ${TRIVIAROM_LAUNCH_URL:-http://trivia.jarvis.home/}
+      BLACKTORRENT_STATUS_URL: ${BLACKTORRENT_STATUS_URL:-http://192.168.1.100:8080/}
+      BLACKTORRENT_LAUNCH_URL: ${BLACKTORRENT_LAUNCH_URL:-http://192.168.1.100:8080/}
       JELLYFIN_LAUNCH_URL: ${JELLYFIN_LAUNCH_URL:-http://jellyfin.jarvis.home/}
     ports:
       - "${LAN_BIND_IP:-192.168.1.100}:${CONSOLE_HOST_PORT:-8791}:8080"

@@ -26,6 +26,10 @@ class ConfigTests(unittest.TestCase):
                          "http://label.jarvis.home/print")
         self.assertEqual(services["jeopardy"].launch_url,
                          "http://jeopardy.home/")
+        self.assertEqual(services["blacktorrent"].status_url,
+                         "http://192.168.1.100:8080/")
+        self.assertEqual(services["blacktorrent"].launch_url,
+                         "http://192.168.1.100:8080/")
         self.assertEqual(services["jellyfin"].launch_url,
                          "http://jellyfin.jarvis.home/")
 
@@ -41,6 +45,8 @@ class ConfigTests(unittest.TestCase):
         self.assertIn("    container_name: jarvis-console\n", compose)
         self.assertIn('${CONSOLE_HOST_PORT:-8791}:8080', compose)
         self.assertIn("MORNING_BRIEF_URL: ${MORNING_BRIEF_URL:-http://receipt-service:8080/print/morning}",
+                      compose)
+        self.assertIn("BLACKTORRENT_STATUS_URL: ${BLACKTORRENT_STATUS_URL:-http://192.168.1.100:8080/}",
                       compose)
         self.assertIn("    external: true\n    name: jarvis-receipt-services\n", compose)
         self.assertNotIn("depends_on", compose)

@@ -21,7 +21,8 @@ DNS or reverse-proxy settings.
 
 The application is a Python 3.12 standard-library HTTP server with static HTML,
 CSS, and a small vanilla JavaScript client. `GET /api/status` checks Receipt,
-Label, Jeopardy, and TriviaROM concurrently through strict per-service adapters.
+Label, Jeopardy, TriviaROM, and BlackTorrent concurrently through strict
+per-service adapters.
 Each request has a bounded timeout, and each result is isolated so a slow or
 invalid service cannot suppress healthy peers. Jellyfin is launch-only because
 no accepted health contract has been inventoried.
@@ -77,6 +78,8 @@ Internal status targets and browser launch URLs are separate settings:
 | `JEOPARDY_LAUNCH_URL` | `http://jeopardy.home/` |
 | `TRIVIAROM_STATUS_URL` | `http://triviarom-service:8080/health` |
 | `TRIVIAROM_LAUNCH_URL` | `http://trivia.jarvis.home/` |
+| `BLACKTORRENT_STATUS_URL` | `http://192.168.1.100:8080/` |
+| `BLACKTORRENT_LAUNCH_URL` | `http://192.168.1.100:8080/` |
 | `JELLYFIN_LAUNCH_URL` | `http://jellyfin.jarvis.home/` |
 
 `STATUS_TIMEOUT_SECONDS` must be between 0.1 and 10 seconds, and the Morning
@@ -121,6 +124,9 @@ exposed outside the trusted home LAN.
 - Jellyfin status is unavailable until an accepted API contract is verified.
 - Label health proves only that its HTTP process responds.
 - Jeopardy health proves corpus readability; TriviaROM reports corpus counts.
+- BlackTorrent health proves only that its unauthenticated qBittorrent WebUI is
+  reachable. It does not inspect Docker, authenticate to qBittorrent, or prove
+  VPN tunnel/interface/namespace state.
 - Receipt health does not probe printers or upstream content services.
 - Receipt provides configured scheduler time and durable prior-attempt state,
   but not a calculated next-run timestamp.

@@ -82,6 +82,11 @@ def load_config() -> Config:
             _url("TRIVIAROM_LAUNCH_URL", "http://trivia.jarvis.home/"),
         ),
         ServiceConfig(
+            "blacktorrent", "BlackTorrent",
+            _status_url("BLACKTORRENT_STATUS_URL", "http://192.168.1.100:8080/"),
+            _url("BLACKTORRENT_LAUNCH_URL", "http://192.168.1.100:8080/"),
+        ),
+        ServiceConfig(
             "jellyfin", "Jellyfin", None,
             _url("JELLYFIN_LAUNCH_URL", "http://jellyfin.jarvis.home/"),
         ),
