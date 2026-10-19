@@ -322,6 +322,7 @@ class ConsoleHTTPTests(unittest.TestCase):
         combined = html + script + styles
         self.assertIn('id="refresh"', html)
         self.assertIn('id="services"', html)
+        self.assertIn('href="/services"', html)
         self.assertIn('fetch("/api/status"', script)
         self.assertIn('fetch("/api/actions/morning-brief"', script)
         self.assertIn("Print Morning Brief", script)
@@ -337,6 +338,27 @@ class ConsoleHTTPTests(unittest.TestCase):
         self.assertIn("@media (max-width: 620px)", styles)
         for hostname in ("receipt-service", "jeopardy-service", "triviarom-service"):
             self.assertNotIn(hostname, combined)
+
+    def test_services_readme_has_toc_inventory_and_no_secrets(self):
+        html = (ROOT / "web/services.html").read_text()
+        for anchor in (
+                "console", "receipt", "label", "jeopardy", "triviarom",
+                "jellyfin", "blacktorrent", "scrypted", "shortcuts"):
+            self.assertIn(f'href="#{anchor}"', html)
+            self.assertIn(f'id="{anchor}"', html)
+        self.assertIn("Jarvis Docker Services", html)
+        self.assertIn("TV Guide", html)
+        self.assertIn("Quick Labels", html)
+        for secret in ("OPENVPN_PASSWORD", "OPENVPN_USER", "WebUIPassword_PBKDF2"):
+            self.assertNotIn(secret, html)
+
+    def test_services_readme_is_served(self):
+        config = configuration("http://127.0.0.1:1", timeout=0.1)
+        with self.console(config) as base:
+            with urlopen(base + "/services", timeout=1) as response:
+                body = response.read().decode()
+        self.assertEqual(response.status, 200)
+        self.assertIn("Jarvis Docker Services", body)
 
     def test_unknown_routes_and_posts_do_not_add_actions(self):
         config = configuration("http://127.0.0.1:1", timeout=0.1)

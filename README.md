@@ -39,6 +39,9 @@ or API output.
 - `POST /api/actions/morning-brief` forwards exactly one non-retried request to
   Receipt Service while holding a process-local in-flight guard.
 - `GET /`, `/assets/app.css`, and `/assets/app.js` serve the dashboard.
+- `GET /services` serves the linked Jarvis Docker Services README. It records
+  source-backed topology, contracts, operational boundaries, and possible safe
+  navigation shortcuts without exposing service secrets.
 
 The Morning Brief endpoint accepts no body. It reports success only when Receipt
 returns its accepted response, reports known rejections as failures, and treats

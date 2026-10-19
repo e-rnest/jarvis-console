@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jarvis Docker Services</title>
+  <link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+  <main class="shell docs">
+    <header class="header docs-header">
+      <div>
+        <p class="eyebrow">Household service catalog</p>
+        <h1>Jarvis Docker Services</h1>
+        <p class="summary">What each mounted service owns, how it is reached, what its health means, and the operational rules that keep the household stack dependable.</p>
+        <p class="doc-meta">Verified against mounted Compose files and current implementations on October 18, 2026. Secrets, credentials, tokens, media contents, and private runtime databases are intentionally excluded.</p>
+      </div>
+      <a class="back-link" href="/">Back to Console</a>
+    </header>
+
+    <nav class="doc-section" aria-labelledby="contents-heading">
+      <h2 id="contents-heading">Contents</h2>
+      <ol class="toc">
+        <li><a href="#map">Service map</a></li>
+        <li><a href="#console">Jarvis Console</a></li>
+        <li><a href="#receipt">Receipt Service</a></li>
+        <li><a href="#label">Label Service</a></li>
+        <li><a href="#jeopardy">Jeopardy Service</a></li>
+        <li><a href="#triviarom">TriviaROM</a></li>
+        <li><a href="#jellyfin">Jellyfin</a></li>
+        <li><a href="#blacktorrent">BlackTorrent</a></li>
+        <li><a href="#scrypted">Scrypted</a></li>
+        <li><a href="#integrations">Integration map</a></li>
+        <li><a href="#shortcuts">Console shortcut candidates</a></li>
+        <li><a href="#rules">Operating and safety rules</a></li>
+        <li><a href="#gaps">Known documentation gaps</a></li>
+      </ol>
+    </nav>
+
+    <section class="doc-section" id="map">
+      <h2>Service map</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Service</th><th>Human entry point</th><th>Published LAN port</th><th>Console status</th></tr></thead>
+          <tbody>
+            <tr><td>Jarvis Console</td><td><a href="http://console.jarvis.home/">console.jarvis.home</a></td><td>8791 → 8080</td><td>Own <code>/health</code></td></tr>
+            <tr><td>Receipt</td><td>API service; no general UI</td><td>8788 → 8080</td><td>Accepted JSON health contract</td></tr>
+            <tr><td>Label</td><td><a href="http://label.jarvis.home/print">label.jarvis.home/print</a></td><td>5050 → 5050</td><td>HTTP process health</td></tr>
+            <tr><td>Jeopardy</td><td><a href="http://jeopardy.home/">jeopardy.home</a></td><td>8789 → 8080</td><td>Corpus-aware health</td></tr>
+            <tr><td>TriviaROM</td><td><a href="http://trivia.jarvis.home/">trivia.jarvis.home</a></td><td>8790 → 8080</td><td>Corpus counts and readiness</td></tr>
+            <tr><td>Jellyfin</td><td><a href="http://jellyfin.home">jellyfin.home</a></td><td>Known direct service port: 8096</td><td>Unavailable; launch-only</td></tr>
+            <tr><td>BlackTorrent</td><td><a href="http://192.168.1.100:8080/">qBittorrent WebUI</a></td><td>8080 through Gluetun</td><td>WebUI reachability only</td></tr>
+            <tr><td>Scrypted</td><td>Not established from mounted deployment files</td><td>Host networking; no Compose port map</td><td>Not in Console</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="doc-meta">Reverse-proxy and local-DNS definitions live outside these mounted repositories. A hostname shown here is an accepted household entry point, not a declaration that Console manages DNS.</p>
+    </section>
+
+    <section class="doc-section service-heading" id="console">
+      <h2>Jarvis Console</h2>
+      <p>Lightweight, read-oriented front door for household services. It is an orchestrator/client only: every downstream service continues to operate if Console is unavailable.</p>
+      <h3>Deployment</h3>
+      <ul>
+        <li>Python 3.12 standard-library HTTP server with static HTML, CSS, and vanilla JavaScript.</li>
+        <li>Compose project, service, container, and hostname are <code>jarvis-console</code>; restart policy is <code>unless-stopped</code>.</li>
+        <li>Publishes <code>192.168.1.100:8791</code> to container port <code>8080</code> by default and joins the external <code>jarvis-receipt-services</code> network.</li>
+        <li>Container health checks <code>GET /health</code>. JSON logs rotate at 5 MiB with three retained files.</li>
+      </ul>
+      <h3>Contracts</h3>
+      <ul>
+        <li><code>GET /health</code> reports Console process health only.</li>
+        <li><code>GET /api/status</code> checks supported services concurrently with bounded per-service timeouts and isolates every result.</li>
+        <li><code>POST /api/actions/morning-brief</code> dispatches exactly one Receipt request with no automatic retry and a process-local in-flight guard.</li>
+        <li><code>GET /services</code> serves this catalog.</li>
+      </ul>
+      <p class="callout">Console status terms are deliberate: <strong>healthy</strong> means an accepted contract succeeded; <strong>failed</strong> means a supported contract explicitly reported failure; <strong>unknown</strong> means truth could not be established; <strong>unavailable</strong> means no accepted health contract exists.</p>
+    </section>
+
+    <section class="doc-section service-heading" id="receipt">
+      <h2>Receipt Service</h2>
+      <p>Owns thermal receipt printing and the Morning Brief scheduler. Console never reproduces its scheduler or print logic.</p>
+      <h3>Deployment and dependencies</h3>
+      <ul>
+        <li>Container <code>receipt-service</code>, restart <code>unless-stopped</code>, published on <code>192.168.1.100:8788</code>, with a 90-second stop grace period.</li>
+        <li>Joins its default network and the external <code>jarvis-receipt-services</code> network, where it has <code>receipt-service</code> and legacy <code>morning-brief</code> aliases.</li>
+        <li>Uses a named persistent schedule-state volume so a claimed daily run survives container replacement.</li>
+        <li>Prints raw ESC/POS over TCP to the receipt printer on port 9100. The configured printer is not probed by health.</li>
+        <li>Morning Brief gathers its own weather, market, headline, daily-content, and trivia inputs; upstream failures are handled within Receipt rather than by Console.</li>
+      </ul>
+      <h3>Current HTTP surface</h3>
+      <ul>
+        <li><code>GET /health</code> — service, scheduler configuration/state, and print-lock state.</li>
+        <li><code>POST /print/morning</code> — deliberate Morning Brief physical print.</li>
+        <li><code>POST /print/inventory</code> — inventory receipt.</li>
+        <li><code>POST /print/jeopardy</code> and optional <code>?id=…</code> — Jeopardy clue receipt.</li>
+        <li><code>POST /print/capabilities</code> — printer capability test output.</li>
+        <li><code>POST /print/image</code> — PNG/JPEG multipart image print with bounded upload and rendering limits.</li>
+      </ul>
+      <h3>Important behavior</h3>
+      <ul>
+        <li>The daily scheduler uses a durable at-most-once claim. Automatic print retries are intentionally absent.</li>
+        <li>Manual prints do not consume the scheduler's daily claim.</li>
+        <li>A shared nonblocking print lock prevents concurrent physical jobs.</li>
+        <li>An HTTP success means the service completed its accepted send path; the printer protocol cannot prove that paper physically emerged.</li>
+        <li>Health does not prove printer reachability or the availability of content providers.</li>
+      </ul>
+    </section>
+
+    <section class="doc-section service-heading" id="label">
+      <h2>Label Service</h2>
+      <p>Owns Brother label rendering/printing, reusable quick labels, and lightweight refrigerator/freezer inventory workflows.</p>
+      <h3>Deployment</h3>
+      <ul>
+        <li>Flask service published on host port <code>5050</code>, restart <code>unless-stopped</code>.</li>
+        <li>The Compose deployment bind-mounts the project at <code>/app</code>; there is no container-level Compose healthcheck.</li>
+        <li>Prints to a Brother QL-710W-compatible raw TCP endpoint on port 9100 using <code>brother_ql</code>, with a 62 mm / 696-pixel rendering model.</li>
+      </ul>
+      <h3>Browser and data features</h3>
+      <ul>
+        <li><code>/print</code> — main print interface.</li>
+        <li><code>/labels</code> — add, rename, delete, reorder, and print reusable quick labels.</li>
+        <li><code>/inventory</code> and <code>/inventory/frozen</code> — fridge and freezer inventory, including edit, archive, freeze, and restore flows.</li>
+        <li>Inventory uses soft states for active, frozen, and archived items. Freezing preserves the original creation time and does not print another label.</li>
+        <li>Supported layouts include timestamps, images, text, timestamped text, one/two-line storage labels, large two-line storage labels, and item labels. Appropriate text routes support regular and bold font weight.</li>
+        <li>A bounded rotating JSONL audit records print attempts locally; it is operational data, not a Console feed.</li>
+      </ul>
+      <h3>Important behavior</h3>
+      <ul>
+        <li><code>GET /health</code> proves the HTTP process responds; it does not prove the printer is reachable.</li>
+        <li>Only the item-print workflow creates inventory rows.</li>
+        <li>Print calls are not automatically retried, and the raw printer protocol does not confirm physical paper output.</li>
+      </ul>
+    </section>
+
+    <section class="doc-section service-heading" id="jeopardy">
+      <h2>Jeopardy Service</h2>
+      <p>Read-only clue browser and API backed by a generated SQLite corpus, with Receipt-owned physical clue printing.</p>
+      <h3>Deployment and data</h3>
+      <ul>
+        <li>Container and hostname <code>jeopardy-service</code>, restart <code>unless-stopped</code>, default host port <code>8789</code>.</li>
+        <li>Joins its default network plus <code>jarvis-receipt-services</code> and mounts the generated SQLite corpus read-only.</li>
+        <li>Container health checks <code>GET /health</code>, which validates corpus readability rather than merely serving the homepage.</li>
+      </ul>
+      <h3>Features and API</h3>
+      <ul>
+        <li>Browser UI supports random and daily clues, answer reveal, canonical <code>?id=…</code> links, category boards, sharing, and printing.</li>
+        <li><code>GET /api/jeopardy/random</code>, <code>/clues/{id}</code>, <code>/clues/{id}/category</code>, and <code>/daily?date=…</code> are the current read APIs.</li>
+        <li><code>POST /api/jeopardy/clues/{id}/print</code> delegates one print to Receipt Service.</li>
+        <li>Clue IDs come from the generated corpus and may change if source data is rebuilt.</li>
+      </ul>
+    </section>
+
+    <section class="doc-section service-heading" id="triviarom">
+      <h2>TriviaROM</h2>
+      <p>Read-only browser and API over an archived multi-pack trivia corpus. Receipt uses its random-question API for Morning Brief content.</p>
+      <h3>Deployment and corpus</h3>
+      <ul>
+        <li>Compose project, service, container, and hostname are <code>triviarom-service</code>; restart is <code>unless-stopped</code>.</li>
+        <li>Publishes host port <code>8790</code>, joins its default network and <code>jarvis-receipt-services</code>, and health checks <code>GET /health</code>.</li>
+        <li>The image contains 68 archived dataset files: 145,600 total records and 137,173 playable records. Five primarily non-English packs are excluded from the default playable pool.</li>
+        <li>No persistent runtime state is required. A 256-question recent-history ring is in memory and resets on restart.</li>
+      </ul>
+      <h3>Features and API</h3>
+      <ul>
+        <li><code>GET /api/trivia/random</code> and <code>?pack=…</code> select playable questions.</li>
+        <li><code>GET /api/trivia/packs</code> lists pack metadata; <code>GET /api/trivia/questions/{id}</code> resolves stable 12-hex-character question IDs.</li>
+        <li>All POST routes are rejected. Choice order is deterministic for each question, and direct-ID reads do not alter the recent-history ring.</li>
+        <li>The browser supports pack selection, answer reveal, history-safe canonical <code>?id=…</code> links, and 2–4 choice questions.</li>
+      </ul>
+    </section>
+
+    <section class="doc-section service-heading" id="jellyfin">
+      <h2>Jellyfin</h2>
+      <p>Household media server. Console currently treats it as launch-only because no accepted unauthenticated health contract has been established.</p>
+      <h3>Known current setup</h3>
+      <ul>
+        <li>Primary entry point: <a href="http://jellyfin.home">http://jellyfin.home</a>. A direct port-8096 entry point is also known operationally.</li>
+        <li>The mounted directory contains Jellyfin runtime configuration, cache, metadata, plugins, databases, and logs rather than the deployment's Compose definition.</li>
+        <li>Application HTTP is enabled, built-in HTTPS is disabled, UPnP is disabled, and remote access is enabled. TLS/host routing is therefore an external concern.</li>
+        <li>Live TV is configured with an M3U tuner and an XMLTV guide provider. Source URLs and tokens are deliberately omitted.</li>
+        <li>Console's current <strong>TV Guide</strong> shortcut opens the Jellyfin Live TV guide directly.</li>
+      </ul>
+      <p class="callout">A successful Jellyfin homepage fetch would not be a truthful media-server health contract. Console will continue to say status unavailable until an accepted endpoint and response schema are verified.</p>
+    </section>
+
+    <section class="doc-section service-heading" id="blacktorrent">
+      <h2>BlackTorrent</h2>
+      <p>VPN-isolated qBittorrent downloader. qBittorrent has no independent network interface: it shares Gluetun's network namespace and reaches the LAN only through Gluetun's published WebUI port.</p>
+      <h3>Deployment</h3>
+      <ul>
+        <li><code>gluetun</code> uses <code>qmcgaw/gluetun:v3</code>, OpenVPN UDP, NordVPN, firewalling, <code>NET_ADMIN</code>, and <code>/dev/net/tun</code>.</li>
+        <li><code>qbittorrent</code> uses the LinuxServer image and <code>network_mode: service:gluetun</code>. Both services use restart policy <code>always</code>.</li>
+        <li>Gluetun publishes <code>192.168.1.100:8080</code> to qBittorrent's WebUI. qBittorrent itself publishes no ports.</li>
+        <li>qBittorrent is configured to bind its traffic to <code>tun0</code>, disable UPnP and port forwarding, watch an inbox directory, and separate incomplete from complete downloads.</li>
+        <li>Gluetun state, qBittorrent configuration, watch input, and download data are persistent host directories.</li>
+      </ul>
+      <h3>Health boundary</h3>
+      <ul>
+        <li>Console currently performs one unauthenticated <code>GET /</code> against the WebUI and marks 2xx as healthy. This proves only browser reachability through Gluetun's namespace.</li>
+        <li>The stronger operational check is: Gluetun running and healthy, qBittorrent running, <code>tun0</code> visible inside qBittorrent, and both processes sharing the same network namespace.</li>
+        <li>The reported acceptance checks include a matching Gluetun/torrent leak-test VPN address and successful cold-boot recovery. These are operational observations, not continuously monitored Console facts.</li>
+        <li>Credentials, VPN address, torrent names, and filesystem contents are not exposed in Console or this catalog.</li>
+      </ul>
+      <p class="callout">Never restart Gluetun alone from Console. A Gluetun-only restart can leave qBittorrent attached to an obsolete namespace. If a future restart control is approved, it must operate on the complete Compose stack and must not be added as a casual dashboard action.</p>
+    </section>
+
+    <section class="doc-section service-heading" id="scrypted">
+      <h2>Scrypted</h2>
+      <p>Camera and home-automation bridge with persistent device/plugin state.</p>
+      <h3>Deployment facts established from Compose</h3>
+      <ul>
+        <li>Uses <code>ghcr.io/koush/scrypted</code> with restart policy <code>unless-stopped</code>.</li>
+        <li>Uses host networking rather than published Compose ports. Network identity and multicast behavior are therefore coupled to the Docker host.</li>
+        <li>Enables Docker Avahi support and persists server state under the mounted Scrypted volume.</li>
+        <li>The runtime data contains installed plugin/device state, including HomeKit components. That private state was not enumerated into this public household catalog.</li>
+      </ul>
+      <p class="callout">The mounted Compose file does not declare a canonical browser URL, explicit healthcheck, or fixed image tag. No Scrypted card or shortcut should be added until its accepted LAN URL and truthful health contract are confirmed from the deployed configuration.</p>
+    </section>
+
+    <section class="doc-section" id="integrations">
+      <h2>Integration map</h2>
+      <ul>
+        <li><strong>Console → Receipt, Jeopardy, TriviaROM:</strong> backend HTTP over the shared <code>jarvis-receipt-services</code> Docker network.</li>
+        <li><strong>Console → Label:</strong> backend HTTP through the accepted LAN route on port 5050.</li>
+        <li><strong>Console → BlackTorrent:</strong> backend HTTP to the Gluetun-published qBittorrent WebUI.</li>
+        <li><strong>Console → Jellyfin:</strong> browser navigation only; no health request.</li>
+        <li><strong>Receipt → TriviaROM and Jeopardy:</strong> content/print integrations over the shared Docker network.</li>
+        <li><strong>Jeopardy → Receipt:</strong> clue-print request; Jeopardy does not speak directly to the printer.</li>
+        <li><strong>Receipt → Label:</strong> accepted LAN HTTP route for label-related integration.</li>
+        <li><strong>Receipt and Label → printers:</strong> each service owns its own raw TCP printer protocol and rendering behavior.</li>
+        <li><strong>BlackTorrent:</strong> qBittorrent's only network namespace is Gluetun's; there is no Console/Docker control integration.</li>
+        <li><strong>Jellyfin and Scrypted:</strong> operationally independent of the shared Jarvis application network.</li>
+      </ul>
+    </section>
+
+    <section class="doc-section" id="shortcuts">
+      <h2>Console shortcut candidates</h2>
+      <p>These are navigation ideas, not an instruction to invent APIs or add operational controls. Existing actions are identified separately.</p>
+      <ul>
+        <li><strong>Jellyfin — TV Guide:</strong> already present; opens <code>/web/#/livetv?collectionType=livetv&amp;tab=1</code>.</li>
+        <li><strong>Label — Quick Labels:</strong> safe navigation to <code>http://label.jarvis.home/labels</code>.</li>
+        <li><strong>Label — Fridge:</strong> safe navigation to <code>http://label.jarvis.home/inventory</code>.</li>
+        <li><strong>Label — Freezer:</strong> safe navigation to <code>http://label.jarvis.home/inventory/frozen</code>.</li>
+        <li><strong>Jellyfin — Admin:</strong> optional authenticated navigation to the server dashboard, useful only if day-to-day administration belongs on the appliance panel.</li>
+        <li><strong>Receipt — Print Morning Brief:</strong> already present as the sole Console physical action, with confirmation, no retry, and ambiguity handling.</li>
+        <li><strong>Receipt — Inventory receipt or capability test:</strong> APIs exist, but these create physical output and should not become casual secondary links. Add only after a specific household workflow and the same safety guardrails are approved.</li>
+        <li><strong>Jeopardy:</strong> no fixed secondary link is compelling. Category views require a clue context; random play is already the primary launch experience.</li>
+        <li><strong>TriviaROM:</strong> no stable pack-picker deep link currently exists; pack selection already lives in the application.</li>
+        <li><strong>BlackTorrent:</strong> no secondary button recommended. Do not add Gluetun-only restart, credential, IP, or Docker controls.</li>
+        <li><strong>Scrypted:</strong> defer shortcuts until the canonical URL and supported deep links are verified.</li>
+      </ul>
+    </section>
+
+    <section class="doc-section" id="rules">
+      <h2>Operating and safety rules</h2>
+      <ul>
+        <li>Current implementation and physically accepted behavior outrank older inventory prose.</li>
+        <li>Do not infer health from a homepage when a real health endpoint exists.</li>
+        <li>A downstream failure must never take down Console; all checks require bounded timeouts.</li>
+        <li>Browser-facing links use LAN-reachable names or addresses, never internal Docker hostnames.</li>
+        <li>Physical print requests are deliberate, confirmed, and never automatically retried.</li>
+        <li>Console does not own Docker, restart containers, aggregate logs, edit service configuration, or duplicate service business logic.</li>
+        <li>Do not expose secrets, API tokens, password hashes, VPN addresses, media history, camera/device state, torrent contents, or private databases.</li>
+        <li>Floating image tags in BlackTorrent and Scrypted can change behavior on pull. Treat upgrades as explicit maintenance with post-upgrade acceptance checks.</li>
+        <li>Reverse proxy and DNS are external infrastructure; repository changes do not become live until the Console image is rebuilt/recreated through the accepted deployment process.</li>
+      </ul>
+    </section>
+
+    <section class="doc-section" id="gaps">
+      <h2>Known documentation gaps</h2>
+      <ul>
+        <li>The older root service inventory predates Console, TriviaROM, BlackTorrent, Scrypted, and recent Receipt/Label behavior. This page records the newer source-backed view.</li>
+        <li>Jellyfin's mounted directory does not contain its container/Compose definition, so image tag, restart policy, and exact host-volume wiring are not claimed here.</li>
+        <li>Scrypted's canonical LAN/reverse-proxy URL and an accepted health endpoint were not present in its Compose file.</li>
+        <li>Local DNS and Synology reverse-proxy configuration were not part of the mounted service sources and remain external documentation concerns.</li>
+        <li>BlackTorrent's stronger VPN/namespace health requires authorized runtime Docker inspection; Console intentionally lacks that access today.</li>
+      </ul>
+      <p class="doc-meta">When one of these gaps is resolved, update this page from the accepted deployment source—not from assumption or a transient homepage response.</p>
+    </section>
+
+    <footer class="site-footer"><a href="/">Return to Jarvis Console</a></footer>
+  </main>
+</body>
+</html>
