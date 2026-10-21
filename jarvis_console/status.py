@@ -5,13 +5,14 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 
-from .clients import blacktorrent, jeopardy, label, receipt, triviarom
+from .clients import blacktorrent, jeopardy, label, manifest, receipt, triviarom
 from .clients.common import result
 from .config import Config, ServiceConfig
 
 ADAPTERS = {
     "receipt": receipt.check,
     "label": label.check,
+    "manifest": manifest.check,
     "jeopardy": jeopardy.check,
     "triviarom": triviarom.check,
     "blacktorrent": blacktorrent.check,

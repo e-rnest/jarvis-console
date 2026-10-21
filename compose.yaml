@@ -16,12 +16,15 @@ services:
       RECEIPT_REPOSITORY_URL: ${RECEIPT_REPOSITORY_URL:-https://github.com/e-rnest/receipt-service}
       LABEL_STATUS_URL: ${LABEL_STATUS_URL:-http://jarvis.home:5050/health}
       LABEL_LAUNCH_URL: ${LABEL_LAUNCH_URL:-http://label.jarvis.home/print}
+      MANIFEST_STATUS_URL: ${MANIFEST_STATUS_URL:-http://manifest.home/health}
+      MANIFEST_LAUNCH_URL: ${MANIFEST_LAUNCH_URL:-http://manifest.home/}
       JEOPARDY_STATUS_URL: ${JEOPARDY_STATUS_URL:-http://jeopardy-service:8080/health}
       JEOPARDY_LAUNCH_URL: ${JEOPARDY_LAUNCH_URL:-http://jeopardy.home/}
       TRIVIAROM_STATUS_URL: ${TRIVIAROM_STATUS_URL:-http://triviarom-service:8080/health}
       TRIVIAROM_LAUNCH_URL: ${TRIVIAROM_LAUNCH_URL:-http://trivia.jarvis.home/}
       BLACKTORRENT_STATUS_URL: ${BLACKTORRENT_STATUS_URL:-http://192.168.1.100:8080/}
-      BLACKTORRENT_LAUNCH_URL: ${BLACKTORRENT_LAUNCH_URL:-http://192.168.1.100:8080/}
+      BLACKTORRENT_LAUNCH_URL: ${BLACKTORRENT_LAUNCH_URL:-http://blacktorrent.home/}
+      BLACKTORRENT_BACKUP_URL: ${BLACKTORRENT_BACKUP_URL:-http://blacktorrent.jarvis.home/}
       JELLYFIN_LAUNCH_URL: ${JELLYFIN_LAUNCH_URL:-http://jellyfin.home}
       JELLYFIN_TV_GUIDE_URL: ${JELLYFIN_TV_GUIDE_URL:-http://jellyfin.home/web/#/livetv?collectionType=livetv&tab=1}
     ports:

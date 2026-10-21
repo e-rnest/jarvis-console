@@ -13,7 +13,7 @@
         <p class="eyebrow">Household service catalog</p>
         <h1>Jarvis Docker Services</h1>
         <p class="summary">What each mounted service owns, how it is reached, what its health means, and the operational rules that keep the household stack dependable.</p>
-        <p class="doc-meta">Verified against mounted Compose files and current implementations on October 18, 2026. Secrets, credentials, tokens, media contents, and private runtime databases are intentionally excluded.</p>
+        <p class="doc-meta">Verified against mounted Compose files and current implementations on October 21, 2026. Secrets, credentials, tokens, media contents, and private runtime databases are intentionally excluded.</p>
       </div>
       <a class="back-link" href="/">Back to Console</a>
     </header>
@@ -23,8 +23,11 @@
       <ol class="toc">
         <li><a href="#map">Service map</a></li>
         <li><a href="#console">Jarvis Console</a></li>
+        <li><a href="#homeassistant">Home Assistant</a></li>
+        <li><a href="#matter">Matter Server</a></li>
         <li><a href="#receipt">Receipt Service</a></li>
         <li><a href="#label">Label Service</a></li>
+        <li><a href="#manifest">Manifest</a></li>
         <li><a href="#jeopardy">Jeopardy Service</a></li>
         <li><a href="#triviarom">TriviaROM</a></li>
         <li><a href="#jellyfin">Jellyfin</a></li>
@@ -44,12 +47,15 @@
           <thead><tr><th>Service</th><th>Human entry point</th><th>Published LAN port</th><th>Console status</th></tr></thead>
           <tbody>
             <tr><td>Jarvis Console</td><td><a href="http://console.jarvis.home/">console.jarvis.home</a></td><td>8791 → 8080</td><td>Own <code>/health</code></td></tr>
+            <tr><td>Home Assistant</td><td><a href="http://ha.jarvis.home/">ha.jarvis.home</a></td><td>Host network; 8123</td><td>Not in Console; no accepted health contract</td></tr>
+            <tr><td>Matter Server</td><td>Infrastructure service; no general UI</td><td>Host network; 5580</td><td>Not in Console; no accepted health contract</td></tr>
             <tr><td>Receipt</td><td>API service; no general UI</td><td>8788 → 8080</td><td>Accepted JSON health contract</td></tr>
             <tr><td>Label</td><td><a href="http://label.jarvis.home/print">label.jarvis.home/print</a></td><td>5050 → 5050</td><td>HTTP process health</td></tr>
+            <tr><td>Manifest</td><td><a href="http://manifest.home/">manifest.home</a></td><td>Reverse-proxied application port 8000</td><td>Accepted JSON health contract</td></tr>
             <tr><td>Jeopardy</td><td><a href="http://jeopardy.home/">jeopardy.home</a></td><td>8789 → 8080</td><td>Corpus-aware health</td></tr>
             <tr><td>TriviaROM</td><td><a href="http://trivia.jarvis.home/">trivia.jarvis.home</a></td><td>8790 → 8080</td><td>Corpus counts and readiness</td></tr>
             <tr><td>Jellyfin</td><td><a href="http://jellyfin.home">jellyfin.home</a></td><td>Known direct service port: 8096</td><td>Unavailable; launch-only</td></tr>
-            <tr><td>BlackTorrent</td><td><a href="http://192.168.1.100:8080/">qBittorrent WebUI</a></td><td>8080 through Gluetun</td><td>WebUI reachability only</td></tr>
+            <tr><td>BlackTorrent</td><td><a href="http://blacktorrent.home/">blacktorrent.home</a> (<a href="http://blacktorrent.jarvis.home/">backup</a>)</td><td>8080 through Gluetun</td><td>WebUI reachability only</td></tr>
             <tr><td>Scrypted</td><td>Not established from mounted deployment files</td><td>Host networking; no Compose port map</td><td>Not in Console</td></tr>
           </tbody>
         </table>
@@ -77,6 +83,31 @@
       <p class="callout">Console status terms are deliberate: <strong>healthy</strong> means an accepted contract succeeded; <strong>failed</strong> means a supported contract explicitly reported failure; <strong>unknown</strong> means truth could not be established; <strong>unavailable</strong> means no accepted health contract exists.</p>
     </section>
 
+    <section class="doc-section service-heading" id="homeassistant">
+      <h2>Home Assistant</h2>
+      <p>Owns household integrations, automation policy, and the decision to request an aircraft receipt. Its canonical household URL is <a href="http://ha.jarvis.home/">ha.jarvis.home</a>; <code>ha.home</code> is a convenience alias.</p>
+      <h3>Deployment and boundaries</h3>
+      <ul>
+        <li>Container <code>homeassistant</code> uses host networking, restart policy <code>unless-stopped</code>, and persistent <code>./config:/config</code> state.</li>
+        <li>Synology Reverse Proxy sends both friendly names to <code>192.168.1.100:8123</code>. Home Assistant trusts forwarded headers from <code>192.168.1.100/32</code>, and each proxy rule forwards the WebSocket upgrade.</li>
+        <li>Home Assistant connects to the external Matter Server and calls Receipt over LAN HTTP; it does not own either service's persistence or implementation.</li>
+        <li>Console provides navigation only. No accepted Home Assistant health contract or Console action is configured.</li>
+      </ul>
+      <p class="callout">Deployment, reverse-proxy recovery, integrations, FR24 installation, and migration procedures belong to the Home Assistant project README.</p>
+    </section>
+
+    <section class="doc-section service-heading" id="matter">
+      <h2>Matter Server</h2>
+      <p>Owns the Matter fabric and commissioned-node persistence consumed by Home Assistant Container.</p>
+      <h3>Deployment and boundaries</h3>
+      <ul>
+        <li>Container <code>matterjs-server</code> uses host networking, a read-only root filesystem, restart policy <code>unless-stopped</code>, and persistent <code>./data:/data</code> state.</li>
+        <li>Home Assistant connects to <code>ws://127.0.0.1:5580/ws</code> in the accepted same-host topology.</li>
+        <li>The service has no general browser UI and no accepted Console health contract. Console does not probe or control it.</li>
+      </ul>
+      <p class="callout">Persistence, Synology ACL recovery, backup, security, and upgrade acceptance belong to the Matter Server project README.</p>
+    </section>
+
     <section class="doc-section service-heading" id="receipt">
       <h2>Receipt Service</h2>
       <p>Owns thermal receipt printing and the Morning Brief scheduler. Console never reproduces its scheduler or print logic.</p>
@@ -96,6 +127,7 @@
         <li><code>POST /print/jeopardy</code> and optional <code>?id=…</code> — Jeopardy clue receipt.</li>
         <li><code>POST /print/capabilities</code> — printer capability test output.</li>
         <li><code>POST /print/image</code> — PNG/JPEG multipart image print with bounded upload and rendering limits.</li>
+        <li><code>POST /print/aircraft</code> — validated aircraft notification requested by Home Assistant; formatting, neighborhood enrichment, locking, and physical delivery remain Receipt-owned.</li>
       </ul>
       <h3>Important behavior</h3>
       <ul>
@@ -131,6 +163,20 @@
         <li>Only the item-print workflow creates inventory rows.</li>
         <li>Print calls are not automatically retried, and the raw printer protocol does not confirm physical paper output.</li>
       </ul>
+    </section>
+
+    <section class="doc-section service-heading" id="manifest">
+      <h2>Manifest</h2>
+      <p>Household inventory web application backed by a persistent database and a large read-only product catalog. The separate Manifest Scanner bridge submits Zebra scanner events to Manifest; Label Service remains the independent printing authority.</p>
+      <h3>Deployment and boundaries</h3>
+      <ul>
+        <li>Household entry point: <a href="http://manifest.home/">http://manifest.home/</a>.</li>
+        <li><code>GET /health</code> returns <code>{"status":"ok"}</code> when the Manifest application is ready. Console accepts only that response on HTTP 200.</li>
+        <li>The application persists its inventory database separately, mounts its product catalog read-only, runs with a read-only container filesystem, drops Linux capabilities, and uses <code>no-new-privileges</code>.</li>
+        <li>Manifest Scanner is a separate Docker service with a persistent delivery queue and read-only access to scanner input devices.</li>
+        <li>Console has no Docker-status integration and Manifest Scanner exposes no accepted HTTP health endpoint, so the card makes no scanner-state claim.</li>
+      </ul>
+      <p class="callout">Manifest owns inventory interpretation. The scanner bridge owns durable capture and delivery. Label Service owns printing. Console only reports Manifest's accepted application health and provides navigation.</p>
     </section>
 
     <section class="doc-section service-heading" id="jeopardy">
@@ -189,6 +235,7 @@
       <p>VPN-isolated qBittorrent downloader. qBittorrent has no independent network interface: it shares Gluetun's network namespace and reaches the LAN only through Gluetun's published WebUI port.</p>
       <h3>Deployment</h3>
       <ul>
+        <li>Preferred browser entry point: <a href="http://blacktorrent.home/">http://blacktorrent.home/</a>. Backup entry point: <a href="http://blacktorrent.jarvis.home/">http://blacktorrent.jarvis.home/</a>.</li>
         <li><code>gluetun</code> uses <code>qmcgaw/gluetun:v3</code>, OpenVPN UDP, NordVPN, firewalling, <code>NET_ADMIN</code>, and <code>/dev/net/tun</code>.</li>
         <li><code>qbittorrent</code> uses the LinuxServer image and <code>network_mode: service:gluetun</code>. Both services use restart policy <code>always</code>.</li>
         <li>Gluetun publishes <code>192.168.1.100:8080</code> to qBittorrent's WebUI. qBittorrent itself publishes no ports.</li>
@@ -221,8 +268,12 @@
     <section class="doc-section" id="integrations">
       <h2>Integration map</h2>
       <ul>
+        <li><strong>Home Assistant → Matter Server:</strong> external Matter integration over the same-host WebSocket at <code>127.0.0.1:5580</code>.</li>
+        <li><strong>Home Assistant → Receipt:</strong> selected FR24 entry events become non-retried <code>POST /print/aircraft</code> requests over LAN HTTP. Home Assistant owns selection policy; Receipt owns validation, enrichment, layout, and printing.</li>
         <li><strong>Console → Receipt, Jeopardy, TriviaROM:</strong> backend HTTP over the shared <code>jarvis-receipt-services</code> Docker network.</li>
         <li><strong>Console → Label:</strong> backend HTTP through the accepted LAN route on port 5050.</li>
+        <li><strong>Console → Manifest:</strong> bounded JSON health request to <code>http://manifest.home/health</code>; browser launch to <code>http://manifest.home/</code>.</li>
+        <li><strong>Manifest Scanner → Manifest:</strong> durable queued scan delivery. Console does not inspect the scanner container or queue.</li>
         <li><strong>Console → BlackTorrent:</strong> backend HTTP to the Gluetun-published qBittorrent WebUI.</li>
         <li><strong>Console → Jellyfin:</strong> browser navigation only; no health request.</li>
         <li><strong>Receipt → TriviaROM and Jeopardy:</strong> content/print integrations over the shared Docker network.</li>
@@ -242,12 +293,13 @@
         <li><strong>Label — Quick Labels:</strong> safe navigation to <code>http://label.jarvis.home/labels</code>.</li>
         <li><strong>Label — Fridge:</strong> safe navigation to <code>http://label.jarvis.home/inventory</code>.</li>
         <li><strong>Label — Freezer:</strong> safe navigation to <code>http://label.jarvis.home/inventory/frozen</code>.</li>
+        <li><strong>Manifest:</strong> the primary Launch action is sufficient. Scanner/container controls are intentionally omitted.</li>
         <li><strong>Jellyfin — Admin:</strong> optional authenticated navigation to the server dashboard, useful only if day-to-day administration belongs on the appliance panel.</li>
         <li><strong>Receipt — Print Morning Brief:</strong> already present as the sole Console physical action, with confirmation, no retry, and ambiguity handling.</li>
         <li><strong>Receipt — Inventory receipt or capability test:</strong> APIs exist, but these create physical output and should not become casual secondary links. Add only after a specific household workflow and the same safety guardrails are approved.</li>
         <li><strong>Jeopardy:</strong> no fixed secondary link is compelling. Category views require a clue context; random play is already the primary launch experience.</li>
         <li><strong>TriviaROM:</strong> no stable pack-picker deep link currently exists; pack selection already lives in the application.</li>
-        <li><strong>BlackTorrent:</strong> no secondary button recommended. Do not add Gluetun-only restart, credential, IP, or Docker controls.</li>
+        <li><strong>BlackTorrent — Backup:</strong> now present as safe navigation to <code>http://blacktorrent.jarvis.home/</code>. Do not add Gluetun-only restart, credential, IP, or Docker controls.</li>
         <li><strong>Scrypted:</strong> defer shortcuts until the canonical URL and supported deep links are verified.</li>
       </ul>
     </section>

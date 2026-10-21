@@ -119,6 +119,8 @@ def configuration(base_url: str, timeout: float = 0.25,
             (("GitHub", "https://github.com/e-rnest/receipt-service"),),
         ),
         ServiceConfig("label", "Label", f"{base_url}/label", "http://launch/label"),
+        ServiceConfig("manifest", "Manifest", f"{base_url}/manifest",
+                      "http://launch/manifest"),
         ServiceConfig("jeopardy", "Jeopardy", f"{base_url}/jeopardy", "http://launch/jeopardy"),
         ServiceConfig("triviarom", "TriviaROM", f"{base_url}/trivia", "http://launch/trivia"),
         ServiceConfig("blacktorrent", "BlackTorrent", f"{base_url}/blacktorrent",
@@ -134,6 +136,7 @@ def healthy_responses():
     return {
         "/receipt": (200, RECEIPT_OK, 0),
         "/label": (200, {"status": "ok"}, 0),
+        "/manifest": (200, {"status": "ok"}, 0),
         "/jeopardy": (200, {"status": "ok"}, 0),
         "/trivia": (200, TRIVIA_OK, 0),
         "/blacktorrent": (200, b"<html>qBittorrent</html>", 0),
@@ -150,7 +153,8 @@ class AggregationTests(unittest.TestCase):
             statuses = by_key(aggregate(configuration(base)))
         self.assertEqual(
             {key: value["status"] for key, value in statuses.items()},
-            {"receipt": "healthy", "label": "healthy", "jeopardy": "healthy",
+            {"receipt": "healthy", "label": "healthy", "manifest": "healthy",
+             "jeopardy": "healthy",
              "triviarom": "healthy", "blacktorrent": "healthy",
              "jellyfin": "unavailable"},
         )
@@ -199,6 +203,22 @@ class AggregationTests(unittest.TestCase):
             label = by_key(aggregate(configuration(base)))["label"]
         self.assertEqual(label["summary"], "Service responding")
         self.assertNotIn("details", label)
+
+    def test_manifest_minimal_health_is_accepted_without_scanner_claim(self):
+        with fake_downstreams(healthy_responses()) as (base, _):
+            manifest = by_key(aggregate(configuration(base)))["manifest"]
+        self.assertEqual(manifest["status"], "healthy")
+        self.assertEqual(manifest["summary"], "Inventory service responding")
+        self.assertEqual(manifest["launch_url"], "http://launch/manifest")
+        self.assertNotIn("details", manifest)
+
+    def test_manifest_unavailable_is_unknown_without_suppressing_peers(self):
+        responses = healthy_responses()
+        responses["/manifest"] = (503, {"status": "unavailable"}, 0)
+        with fake_downstreams(responses) as (base, _):
+            statuses = by_key(aggregate(configuration(base)))
+        self.assertEqual(statuses["manifest"]["status"], "unknown")
+        self.assertEqual(statuses["label"]["status"], "healthy")
 
     def test_jeopardy_corpus_failure_is_failed(self):
         responses = healthy_responses()
@@ -255,7 +275,7 @@ class AggregationTests(unittest.TestCase):
         config = configuration(f"http://127.0.0.1:{unused_port}", timeout=0.1)
         statuses = by_key(aggregate(config))
         self.assertTrue(all(statuses[key]["status"] == "unknown"
-                            for key in ("receipt", "label", "jeopardy", "triviarom",
+                            for key in ("receipt", "label", "manifest", "jeopardy", "triviarom",
                                         "blacktorrent")))
 
     def test_timeout_is_unknown(self):
@@ -276,7 +296,7 @@ class AggregationTests(unittest.TestCase):
             elapsed = time.monotonic() - started
         self.assertLess(elapsed, 0.28)
         self.assertTrue(all(statuses[key]["status"] == "unknown"
-                            for key in ("receipt", "label", "jeopardy", "triviarom",
+                            for key in ("receipt", "label", "manifest", "jeopardy", "triviarom",
                                         "blacktorrent")))
 
     def test_jellyfin_makes_no_health_request(self):
@@ -288,7 +308,8 @@ class AggregationTests(unittest.TestCase):
         self.assertEqual(statuses["jellyfin"]["secondary_links"], [
             {"label": "TV Guide", "url": "http://launch/jellyfin/tv"},
         ])
-        self.assertEqual(set(responses), {"/receipt", "/label", "/jeopardy", "/trivia",
+        self.assertEqual(set(responses), {"/receipt", "/label", "/manifest",
+                                          "/jeopardy", "/trivia",
                                           "/blacktorrent"})
         self.assertEqual(downstream.post_paths, [])
 
@@ -345,6 +366,7 @@ class ConsoleHTTPTests(unittest.TestCase):
         self.assertNotIn('addDetail(details, "Packs"', script)
         self.assertIn('if (service.key === "receipt")', script)
         self.assertIn('"BlackTorrent"', script)
+        self.assertIn('"Manifest"', script)
         self.assertIn('"card-actions"', script)
         self.assertIn("service.secondary_links", script)
         self.assertIn("@media (max-width: 620px)", styles)
@@ -354,11 +376,17 @@ class ConsoleHTTPTests(unittest.TestCase):
     def test_services_readme_has_toc_inventory_and_no_secrets(self):
         html = (ROOT / "web/services.html").read_text()
         for anchor in (
-                "console", "receipt", "label", "jeopardy", "triviarom",
+                "console", "homeassistant", "matter", "receipt", "label", "manifest",
+                "jeopardy", "triviarom",
                 "jellyfin", "blacktorrent", "scrypted", "shortcuts"):
             self.assertIn(f'href="#{anchor}"', html)
             self.assertIn(f'id="{anchor}"', html)
         self.assertIn("Jarvis Docker Services", html)
+        self.assertIn("http://ha.jarvis.home/", html)
+        self.assertIn("http://blacktorrent.home/", html)
+        self.assertIn("http://blacktorrent.jarvis.home/", html)
+        self.assertIn("POST /print/aircraft", html)
+        self.assertIn("no accepted Console health contract", html)
         self.assertIn("TV Guide", html)
         self.assertIn("Quick Labels", html)
         for secret in ("OPENVPN_PASSWORD", "OPENVPN_USER", "WebUIPassword_PBKDF2"):

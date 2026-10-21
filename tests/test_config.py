@@ -28,12 +28,19 @@ class ConfigTests(unittest.TestCase):
                          "http://receipt-service:8080/print/morning")
         self.assertEqual(services["label"].launch_url,
                          "http://label.jarvis.home/print")
+        self.assertEqual(services["manifest"].status_url,
+                         "http://manifest.home/health")
+        self.assertEqual(services["manifest"].launch_url,
+                         "http://manifest.home/")
         self.assertEqual(services["jeopardy"].launch_url,
                          "http://jeopardy.home/")
         self.assertEqual(services["blacktorrent"].status_url,
                          "http://192.168.1.100:8080/")
         self.assertEqual(services["blacktorrent"].launch_url,
-                         "http://192.168.1.100:8080/")
+                         "http://blacktorrent.home/")
+        self.assertEqual(services["blacktorrent"].secondary_links, ((
+            "Backup", "http://blacktorrent.jarvis.home/",
+        ),))
         self.assertEqual(services["jellyfin"].launch_url,
                          "http://jellyfin.home")
         self.assertEqual(services["jellyfin"].secondary_links, ((
@@ -57,6 +64,14 @@ class ConfigTests(unittest.TestCase):
         self.assertIn("RECEIPT_REPOSITORY_URL: ${RECEIPT_REPOSITORY_URL:-https://github.com/e-rnest/receipt-service}",
                       compose)
         self.assertIn("BLACKTORRENT_STATUS_URL: ${BLACKTORRENT_STATUS_URL:-http://192.168.1.100:8080/}",
+                      compose)
+        self.assertIn("MANIFEST_STATUS_URL: ${MANIFEST_STATUS_URL:-http://manifest.home/health}",
+                      compose)
+        self.assertIn("MANIFEST_LAUNCH_URL: ${MANIFEST_LAUNCH_URL:-http://manifest.home/}",
+                      compose)
+        self.assertIn("BLACKTORRENT_LAUNCH_URL: ${BLACKTORRENT_LAUNCH_URL:-http://blacktorrent.home/}",
+                      compose)
+        self.assertIn("BLACKTORRENT_BACKUP_URL: ${BLACKTORRENT_BACKUP_URL:-http://blacktorrent.jarvis.home/}",
                       compose)
         self.assertIn("JELLYFIN_TV_GUIDE_URL: ${JELLYFIN_TV_GUIDE_URL:-http://jellyfin.home/web/#/livetv?collectionType=livetv&tab=1}",
                       compose)

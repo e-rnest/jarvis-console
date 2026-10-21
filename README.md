@@ -21,7 +21,7 @@ DNS or reverse-proxy settings.
 
 The application is a Python 3.12 standard-library HTTP server with static HTML,
 CSS, and a small vanilla JavaScript client. `GET /api/status` checks Receipt,
-Label, Jeopardy, TriviaROM, and BlackTorrent concurrently through strict
+Label, Manifest, Jeopardy, TriviaROM, and BlackTorrent concurrently through strict
 per-service adapters.
 Each request has a bounded timeout, and each result is isolated so a slow or
 invalid service cannot suppress healthy peers. Jellyfin is launch-only because
@@ -78,12 +78,15 @@ Internal status targets and browser launch URLs are separate settings:
 | `RECEIPT_REPOSITORY_URL` | `https://github.com/e-rnest/receipt-service` |
 | `LABEL_STATUS_URL` | `http://jarvis.home:5050/health` |
 | `LABEL_LAUNCH_URL` | `http://label.jarvis.home/print` |
+| `MANIFEST_STATUS_URL` | `http://manifest.home/health` |
+| `MANIFEST_LAUNCH_URL` | `http://manifest.home/` |
 | `JEOPARDY_STATUS_URL` | `http://jeopardy-service:8080/health` |
 | `JEOPARDY_LAUNCH_URL` | `http://jeopardy.home/` |
 | `TRIVIAROM_STATUS_URL` | `http://triviarom-service:8080/health` |
 | `TRIVIAROM_LAUNCH_URL` | `http://trivia.jarvis.home/` |
 | `BLACKTORRENT_STATUS_URL` | `http://192.168.1.100:8080/` |
-| `BLACKTORRENT_LAUNCH_URL` | `http://192.168.1.100:8080/` |
+| `BLACKTORRENT_LAUNCH_URL` | `http://blacktorrent.home/` |
+| `BLACKTORRENT_BACKUP_URL` | `http://blacktorrent.jarvis.home/` |
 | `JELLYFIN_LAUNCH_URL` | `http://jellyfin.home` |
 | `JELLYFIN_TV_GUIDE_URL` | `http://jellyfin.home/web/#/livetv?collectionType=livetv&tab=1` |
 
@@ -129,6 +132,9 @@ exposed outside the trusted home LAN.
 
 - Jellyfin status is unavailable until an accepted API contract is verified.
 - Label health proves only that its HTTP process responds.
+- Manifest health proves the inventory/web service responds. Console does not
+  claim scanner/container state because no accepted scanner health contract or
+  existing Docker-status integration is available.
 - Jeopardy health proves corpus readability; TriviaROM reports corpus counts.
 - BlackTorrent health proves only that its unauthenticated qBittorrent WebUI is
   reachable. It does not inspect Docker, authenticate to qBittorrent, or prove

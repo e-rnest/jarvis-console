@@ -111,7 +111,9 @@ async function printMorningBrief(button, output) {
 
 function showLoadingCards() {
   services.replaceChildren();
-  for (const name of ["Receipt Service", "Label", "Jeopardy", "TriviaROM", "BlackTorrent", "Jellyfin"]) {
+  for (const name of [
+    "Receipt Service", "Label", "Manifest", "Jeopardy", "TriviaROM", "BlackTorrent", "Jellyfin",
+  ]) {
     const card = element("article", "card");
     card.append(element("h2", "", name), element("p", "summary", "Checking status…"));
     services.append(card);

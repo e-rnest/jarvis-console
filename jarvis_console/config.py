@@ -77,6 +77,11 @@ def load_config() -> Config:
             _url("LABEL_LAUNCH_URL", "http://label.jarvis.home/print"),
         ),
         ServiceConfig(
+            "manifest", "Manifest",
+            _status_url("MANIFEST_STATUS_URL", "http://manifest.home/health"),
+            _url("MANIFEST_LAUNCH_URL", "http://manifest.home/"),
+        ),
+        ServiceConfig(
             "jeopardy", "Jeopardy",
             _status_url("JEOPARDY_STATUS_URL", "http://jeopardy-service:8080/health"),
             _url("JEOPARDY_LAUNCH_URL", "http://jeopardy.home/"),
@@ -89,7 +94,11 @@ def load_config() -> Config:
         ServiceConfig(
             "blacktorrent", "BlackTorrent",
             _status_url("BLACKTORRENT_STATUS_URL", "http://192.168.1.100:8080/"),
-            _url("BLACKTORRENT_LAUNCH_URL", "http://192.168.1.100:8080/"),
+            _url("BLACKTORRENT_LAUNCH_URL", "http://blacktorrent.home/"),
+            (("Backup", _url(
+                "BLACKTORRENT_BACKUP_URL",
+                "http://blacktorrent.jarvis.home/",
+            )),),
         ),
         ServiceConfig(
             "jellyfin", "Jellyfin", None,
