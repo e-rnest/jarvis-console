@@ -13,6 +13,7 @@ services:
       MORNING_BRIEF_URL: ${MORNING_BRIEF_URL:-http://receipt-service:8080/print/morning}
       MORNING_BRIEF_TIMEOUT_SECONDS: ${MORNING_BRIEF_TIMEOUT_SECONDS:-300}
       RECEIPT_STATUS_URL: ${RECEIPT_STATUS_URL:-http://receipt-service:8080/health}
+      RECEIPT_REPOSITORY_URL: ${RECEIPT_REPOSITORY_URL:-https://github.com/e-rnest/receipt-service}
       LABEL_STATUS_URL: ${LABEL_STATUS_URL:-http://jarvis.home:5050/health}
       LABEL_LAUNCH_URL: ${LABEL_LAUNCH_URL:-http://label.jarvis.home/print}
       JEOPARDY_STATUS_URL: ${JEOPARDY_STATUS_URL:-http://jeopardy-service:8080/health}

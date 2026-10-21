@@ -63,9 +63,13 @@ def load_config() -> Config:
 
     services = (
         ServiceConfig(
-            "receipt", "Receipt",
+            "receipt", "Receipt Service",
             _status_url("RECEIPT_STATUS_URL", "http://receipt-service:8080/health"),
             None,
+            (("GitHub", _url(
+                "RECEIPT_REPOSITORY_URL",
+                "https://github.com/e-rnest/receipt-service",
+            )),),
         ),
         ServiceConfig(
             "label", "Label",

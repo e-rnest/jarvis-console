@@ -114,7 +114,10 @@ def configuration(base_url: str, timeout: float = 0.25,
                   action_timeout: float = 0.25) -> Config:
     return Config("127.0.0.1", 0, timeout,
                   f"{base_url}/print/morning", action_timeout, (
-        ServiceConfig("receipt", "Receipt", f"{base_url}/receipt", None),
+        ServiceConfig(
+            "receipt", "Receipt Service", f"{base_url}/receipt", None,
+            (("GitHub", "https://github.com/e-rnest/receipt-service"),),
+        ),
         ServiceConfig("label", "Label", f"{base_url}/label", "http://launch/label"),
         ServiceConfig("jeopardy", "Jeopardy", f"{base_url}/jeopardy", "http://launch/jeopardy"),
         ServiceConfig("triviarom", "TriviaROM", f"{base_url}/trivia", "http://launch/trivia"),
@@ -152,6 +155,10 @@ class AggregationTests(unittest.TestCase):
              "jellyfin": "unavailable"},
         )
         self.assertIsNone(statuses["receipt"]["launch_url"])
+        self.assertEqual(statuses["receipt"]["secondary_links"], [{
+            "label": "GitHub",
+            "url": "https://github.com/e-rnest/receipt-service",
+        }])
 
     def test_receipt_identity_and_scheduler_details_are_normalized(self):
         with fake_downstreams(healthy_responses()) as (base, _):
@@ -165,6 +172,10 @@ class AggregationTests(unittest.TestCase):
             "scheduler_error": None,
             "printing": False,
         })
+        self.assertEqual(
+            receipt["summary"],
+            "Thermal printing, morning briefs, Jeopardy, and encrypted IPPS telegrams",
+        )
 
     def test_receipt_rejects_non_compatibility_identity(self):
         responses = healthy_responses()
@@ -311,8 +322,8 @@ class ConsoleHTTPTests(unittest.TestCase):
                 with urlopen(console + "/api/status", timeout=2) as response:
                     body = response.read().decode()
         self.assertNotIn(base, body)
-        self.assertNotIn("receipt-service", body)
-        self.assertNotIn("triviarom-service", body)
+        self.assertNotIn("http://receipt-service:", body)
+        self.assertNotIn("http://triviarom-service:", body)
         self.assertIn("http://launch/trivia", body)
 
     def test_static_page_has_required_structure_and_no_internal_hostnames(self):
@@ -326,6 +337,7 @@ class ConsoleHTTPTests(unittest.TestCase):
         self.assertIn('fetch("/api/status"', script)
         self.assertIn('fetch("/api/actions/morning-brief"', script)
         self.assertIn("Print Morning Brief", script)
+        self.assertIn('"Receipt Service"', script)
         self.assertIn("produce physical paper output", script)
         self.assertIn("button.disabled = true", script)
         self.assertIn("button.disabled = false", script)

@@ -53,11 +53,18 @@ function renderCard(service) {
   }
 
   if (service.key === "receipt") {
+    const actions = element("div", "card-actions");
     const action = element("button", "print-button", "Print Morning Brief");
     action.type = "button";
     const actionResult = element("p", "action-result");
     action.addEventListener("click", () => printMorningBrief(action, actionResult));
-    card.append(action, actionResult);
+    actions.append(action);
+    for (const link of service.secondary_links || []) {
+      const secondary = element("a", "launch secondary", link.label);
+      secondary.href = link.url;
+      actions.append(secondary);
+    }
+    card.append(actions, actionResult);
   } else {
     const actions = element("div", "card-actions");
     const launch = element("a", "launch", "Launch");
@@ -104,7 +111,7 @@ async function printMorningBrief(button, output) {
 
 function showLoadingCards() {
   services.replaceChildren();
-  for (const name of ["Receipt", "Label", "Jeopardy", "TriviaROM", "BlackTorrent", "Jellyfin"]) {
+  for (const name of ["Receipt Service", "Label", "Jeopardy", "TriviaROM", "BlackTorrent", "Jellyfin"]) {
     const card = element("article", "card");
     card.append(element("h2", "", name), element("p", "summary", "Checking status…"));
     services.append(card);

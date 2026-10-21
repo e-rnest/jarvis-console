@@ -63,7 +63,9 @@ def check(config: ServiceConfig, timeout: float) -> dict:
                           "Scheduler reported degraded service", config.launch_url, details)
         if http_status != 200:
             raise StatusRequestError("Receipt returned an unexpected HTTP status")
-        summary = "Printing now" if details["printing"] else "Service and scheduler responding"
+        summary = (
+            "Thermal printing, morning briefs, Jeopardy, and encrypted IPPS telegrams"
+        )
         return result(config.key, config.name, "healthy", summary,
                       config.launch_url, details)
     except StatusRequestError as exc:

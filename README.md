@@ -75,6 +75,7 @@ Internal status targets and browser launch URLs are separate settings:
 | `MORNING_BRIEF_URL` | `http://receipt-service:8080/print/morning` |
 | `MORNING_BRIEF_TIMEOUT_SECONDS` | `300` |
 | `RECEIPT_STATUS_URL` | `http://receipt-service:8080/health` |
+| `RECEIPT_REPOSITORY_URL` | `https://github.com/e-rnest/receipt-service` |
 | `LABEL_STATUS_URL` | `http://jarvis.home:5050/health` |
 | `LABEL_LAUNCH_URL` | `http://label.jarvis.home/print` |
 | `JEOPARDY_STATUS_URL` | `http://jeopardy-service:8080/health` |

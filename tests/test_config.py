@@ -18,7 +18,11 @@ class ConfigTests(unittest.TestCase):
                          "http://triviarom-service:8080/health")
         self.assertEqual(services["triviarom"].launch_url,
                          "http://trivia.jarvis.home/")
+        self.assertEqual(services["receipt"].name, "Receipt Service")
         self.assertIsNone(services["receipt"].launch_url)
+        self.assertEqual(services["receipt"].secondary_links, ((
+            "GitHub", "https://github.com/e-rnest/receipt-service",
+        ),))
         self.assertIsNone(services["jellyfin"].status_url)
         self.assertEqual(config.morning_brief_url,
                          "http://receipt-service:8080/print/morning")
@@ -49,6 +53,8 @@ class ConfigTests(unittest.TestCase):
         self.assertIn("    container_name: jarvis-console\n", compose)
         self.assertIn('${CONSOLE_HOST_PORT:-8791}:8080', compose)
         self.assertIn("MORNING_BRIEF_URL: ${MORNING_BRIEF_URL:-http://receipt-service:8080/print/morning}",
+                      compose)
+        self.assertIn("RECEIPT_REPOSITORY_URL: ${RECEIPT_REPOSITORY_URL:-https://github.com/e-rnest/receipt-service}",
                       compose)
         self.assertIn("BLACKTORRENT_STATUS_URL: ${BLACKTORRENT_STATUS_URL:-http://192.168.1.100:8080/}",
                       compose)
