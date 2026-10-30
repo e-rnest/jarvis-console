@@ -63,6 +63,18 @@ def load_config() -> Config:
 
     services = (
         ServiceConfig(
+            "homeassistant", "Home Assistant", None,
+            _url("HOME_ASSISTANT_LAUNCH_URL", "http://ha.jarvis.home/"),
+            (
+                ("Short alias", _url(
+                    "HOME_ASSISTANT_SHORT_URL", "http://ha.home/",
+                )),
+                ("Direct", _url(
+                    "HOME_ASSISTANT_DIRECT_URL", "http://192.168.1.100:8123/",
+                )),
+            ),
+        ),
+        ServiceConfig(
             "receipt", "Receipt Service",
             _status_url("RECEIPT_STATUS_URL", "http://receipt-service:8080/health"),
             None,
@@ -75,6 +87,18 @@ def load_config() -> Config:
             "label", "Label",
             _status_url("LABEL_STATUS_URL", "http://jarvis.home:5050/health"),
             _url("LABEL_LAUNCH_URL", "http://label.jarvis.home/print"),
+            (
+                ("Quick Labels", _url(
+                    "LABEL_QUICK_LABELS_URL", "http://label.jarvis.home/labels",
+                )),
+                ("Fridge", _url(
+                    "LABEL_FRIDGE_URL", "http://label.jarvis.home/inventory",
+                )),
+                ("Freezer", _url(
+                    "LABEL_FREEZER_URL",
+                    "http://label.jarvis.home/inventory/frozen",
+                )),
+            ),
         ),
         ServiceConfig(
             "manifest", "Manifest",
@@ -92,6 +116,11 @@ def load_config() -> Config:
             _url("TRIVIAROM_LAUNCH_URL", "http://trivia.jarvis.home/"),
         ),
         ServiceConfig(
+            "wallboard", "Wallboard",
+            _status_url("WALLBOARD_STATUS_URL", "http://wallboard.home/health"),
+            _url("WALLBOARD_LAUNCH_URL", "http://wallboard.home/"),
+        ),
+        ServiceConfig(
             "blacktorrent", "BlackTorrent",
             _status_url("BLACKTORRENT_STATUS_URL", "http://192.168.1.100:8080/"),
             _url("BLACKTORRENT_LAUNCH_URL", "http://blacktorrent.home/"),
@@ -107,6 +136,19 @@ def load_config() -> Config:
                 "JELLYFIN_TV_GUIDE_URL",
                 "http://jellyfin.home/web/#/livetv?collectionType=livetv&tab=1",
             )),),
+        ),
+        ServiceConfig(
+            "semavox", "Semavox", None,
+            _url("SEMAVOX_LAUNCH_URL", "http://semavox.home"),
+            (
+                ("Fixed IP", _url(
+                    "SEMAVOX_FALLBACK_URL", "http://192.168.1.80",
+                )),
+                ("GitHub", _url(
+                    "SEMAVOX_REPOSITORY_URL",
+                    "https://github.com/e-rnest/semavox",
+                )),
+            ),
         ),
     )
     return Config(

@@ -115,6 +115,11 @@ def configuration(base_url: str, timeout: float = 0.25,
     return Config("127.0.0.1", 0, timeout,
                   f"{base_url}/print/morning", action_timeout, (
         ServiceConfig(
+            "homeassistant", "Home Assistant", None,
+            "http://launch/homeassistant",
+            (("Direct", "http://launch/homeassistant/direct"),),
+        ),
+        ServiceConfig(
             "receipt", "Receipt Service", f"{base_url}/receipt", None,
             (("GitHub", "https://github.com/e-rnest/receipt-service"),),
         ),
@@ -123,11 +128,20 @@ def configuration(base_url: str, timeout: float = 0.25,
                       "http://launch/manifest"),
         ServiceConfig("jeopardy", "Jeopardy", f"{base_url}/jeopardy", "http://launch/jeopardy"),
         ServiceConfig("triviarom", "TriviaROM", f"{base_url}/trivia", "http://launch/trivia"),
+        ServiceConfig("wallboard", "Wallboard", f"{base_url}/wallboard",
+                      "http://launch/wallboard"),
         ServiceConfig("blacktorrent", "BlackTorrent", f"{base_url}/blacktorrent",
                       "http://launch/blacktorrent"),
         ServiceConfig(
             "jellyfin", "Jellyfin", None, "http://launch/jellyfin",
             (("TV Guide", "http://launch/jellyfin/tv"),),
+        ),
+        ServiceConfig(
+            "semavox", "Semavox", None, "http://launch/semavox",
+            (
+                ("Fixed IP", "http://192.168.1.80"),
+                ("GitHub", "https://github.com/e-rnest/semavox"),
+            ),
         ),
     ))
 
@@ -140,6 +154,7 @@ def healthy_responses():
         "/jeopardy": (200, {"status": "ok"}, 0),
         "/trivia": (200, TRIVIA_OK, 0),
         "/blacktorrent": (200, b"<html>qBittorrent</html>", 0),
+        "/wallboard": (200, {"status": "ok"}, 0),
     }
 
 
@@ -155,14 +170,19 @@ class AggregationTests(unittest.TestCase):
             {key: value["status"] for key, value in statuses.items()},
             {"receipt": "healthy", "label": "healthy", "manifest": "healthy",
              "jeopardy": "healthy",
-             "triviarom": "healthy", "blacktorrent": "healthy",
-             "jellyfin": "unavailable"},
+             "triviarom": "healthy", "wallboard": "healthy", "blacktorrent": "healthy",
+             "homeassistant": "unavailable", "jellyfin": "unavailable",
+             "semavox": "unavailable"},
         )
         self.assertIsNone(statuses["receipt"]["launch_url"])
         self.assertEqual(statuses["receipt"]["secondary_links"], [{
             "label": "GitHub",
             "url": "https://github.com/e-rnest/receipt-service",
         }])
+        self.assertEqual(statuses["wallboard"]["summary"],
+                         "Household wallboard responding")
+        self.assertEqual(statuses["wallboard"]["launch_url"],
+                         "http://launch/wallboard")
 
     def test_receipt_identity_and_scheduler_details_are_normalized(self):
         with fake_downstreams(healthy_responses()) as (base, _):
@@ -276,7 +296,7 @@ class AggregationTests(unittest.TestCase):
         statuses = by_key(aggregate(config))
         self.assertTrue(all(statuses[key]["status"] == "unknown"
                             for key in ("receipt", "label", "manifest", "jeopardy", "triviarom",
-                                        "blacktorrent")))
+                                        "wallboard", "blacktorrent")))
 
     def test_timeout_is_unknown(self):
         responses = healthy_responses()
@@ -297,7 +317,7 @@ class AggregationTests(unittest.TestCase):
         self.assertLess(elapsed, 0.28)
         self.assertTrue(all(statuses[key]["status"] == "unknown"
                             for key in ("receipt", "label", "manifest", "jeopardy", "triviarom",
-                                        "blacktorrent")))
+                                        "wallboard", "blacktorrent")))
 
     def test_jellyfin_makes_no_health_request(self):
         responses = healthy_responses()
@@ -310,8 +330,24 @@ class AggregationTests(unittest.TestCase):
         ])
         self.assertEqual(set(responses), {"/receipt", "/label", "/manifest",
                                           "/jeopardy", "/trivia",
-                                          "/blacktorrent"})
+                                          "/wallboard", "/blacktorrent"})
         self.assertEqual(downstream.post_paths, [])
+
+    def test_home_assistant_is_launch_only_with_no_health_request(self):
+        responses = healthy_responses()
+        with fake_downstreams(responses) as (base, _):
+            statuses = by_key(aggregate(configuration(base)))
+        self.assertEqual(statuses["homeassistant"], {
+            "key": "homeassistant",
+            "name": "Home Assistant",
+            "status": "unavailable",
+            "summary": "Health status is not available",
+            "launch_url": "http://launch/homeassistant",
+            "secondary_links": [{
+                "label": "Direct",
+                "url": "http://launch/homeassistant/direct",
+            }],
+        })
 
 
 class ConsoleHTTPTests(unittest.TestCase):
@@ -366,6 +402,7 @@ class ConsoleHTTPTests(unittest.TestCase):
         self.assertNotIn('addDetail(details, "Packs"', script)
         self.assertIn('if (service.key === "receipt")', script)
         self.assertIn('"BlackTorrent"', script)
+        self.assertIn('"Home Assistant"', script)
         self.assertIn('"Manifest"', script)
         self.assertIn('"card-actions"', script)
         self.assertIn("service.secondary_links", script)
@@ -377,6 +414,7 @@ class ConsoleHTTPTests(unittest.TestCase):
         html = (ROOT / "web/services.html").read_text()
         for anchor in (
                 "console", "homeassistant", "matter", "receipt", "label", "manifest",
+                "manifest-scanner", "jarvis-scanner",
                 "jeopardy", "triviarom",
                 "jellyfin", "blacktorrent", "scrypted", "shortcuts"):
             self.assertIn(f'href="#{anchor}"', html)

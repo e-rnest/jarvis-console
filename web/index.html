@@ -18,9 +18,22 @@
       <button id="refresh" class="refresh-button" type="button">Refresh</button>
     </header>
     <section id="services" class="service-grid" aria-label="Service status"></section>
+    <dialog id="ipps-log" class="ipps-dialog" aria-labelledby="ipps-log-title">
+      <div class="ipps-log-header">
+        <h2 id="ipps-log-title">IPPS Telegram History</h2>
+        <button id="ipps-close" type="button" class="refresh-button">Close</button>
+      </div>
+      <p id="ipps-log-state" role="status"></p>
+      <div class="ipps-table-scroll">
+        <table class="ipps-table">
+          <thead><tr><th>Sender</th><th>Message</th><th>IP</th><th>Location</th></tr></thead>
+          <tbody id="ipps-log-rows"></tbody>
+        </table>
+      </div>
+    </dialog>
     <noscript>JavaScript is required to load current service status.</noscript>
     <footer class="site-footer">
-      <a href="/services">Jarvis Docker Services README</a>
+      <a href="/services">Complete service, IP, and alias catalog</a>
     </footer>
   </main>
 </body>

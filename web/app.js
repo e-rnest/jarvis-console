@@ -32,6 +32,16 @@ function renderCard(service) {
   );
   card.append(top, element("p", "summary", service.summary));
 
+  if (service.key === "ipps") {
+    const actions = element("div", "card-actions");
+    const viewLog = element("button", "print-button", "View Log");
+    viewLog.type = "button";
+    viewLog.addEventListener("click", openIppsLog);
+    actions.append(viewLog);
+    card.append(actions);
+    return card;
+  }
+
   if (service.key === "receipt" && service.details) {
     const details = element("dl", "details");
     addDetail(details, "Schedule", service.details.schedule_enabled ? "Enabled" : "Disabled");
@@ -109,10 +119,37 @@ async function printMorningBrief(button, output) {
   }
 }
 
+const ippsDialog = document.querySelector("#ipps-log");
+const ippsLogRows = document.querySelector("#ipps-log-rows");
+const ippsLogState = document.querySelector("#ipps-log-state");
+document.querySelector("#ipps-close").addEventListener("click", () => ippsDialog.close());
+
+async function openIppsLog() {
+  ippsLogRows.replaceChildren();
+  ippsLogState.textContent = "Loading messages…";
+  ippsDialog.showModal();
+  try {
+    const response = await fetch("/api/ipps/history", { cache: "no-store" });
+    if (!response.ok) throw new Error(`History unavailable (HTTP ${response.status})`);
+    const payload = await response.json();
+    if (!Array.isArray(payload.messages)) throw new Error("Invalid history response");
+    for (const entry of payload.messages) {
+      const row = element("tr");
+      for (const field of ["sender", "message", "ip", "location"]) {
+        row.append(element("td", "", entry[field] || "-"));
+      }
+      ippsLogRows.append(row);
+    }
+    ippsLogState.textContent = `${payload.messages.length} most recent message(s), newest first.`;
+  } catch (error) {
+    ippsLogState.textContent = error.message;
+  }
+}
+
 function showLoadingCards() {
   services.replaceChildren();
   for (const name of [
-    "Receipt Service", "Label", "Manifest", "Jeopardy", "TriviaROM", "BlackTorrent", "Jellyfin",
+    "Home Assistant", "Receipt Service", "Thermal Telegram", "Label", "Manifest", "Jeopardy", "TriviaROM", "Wallboard", "BlackTorrent", "Jellyfin", "Semavox",
   ]) {
     const card = element("article", "card");
     card.append(element("h2", "", name), element("p", "summary", "Checking status…"));
@@ -128,7 +165,18 @@ async function refresh() {
     if (!response.ok) throw new Error(`Console returned HTTP ${response.status}`);
     const snapshot = await response.json();
     if (!Array.isArray(snapshot.services)) throw new Error("Console returned an invalid snapshot");
-    services.replaceChildren(...snapshot.services.map(renderCard));
+    const receipt = snapshot.services.find(service => service.key === "receipt");
+    const cards = snapshot.services.flatMap(service => {
+      if (service.key !== "receipt") return [service];
+      const ipps = {
+        key: "ipps",
+        name: "Thermal Telegram",
+        status: service.status,
+        summary: "Encrypted telegram delivery and persistent message history",
+      };
+      return [service, ipps];
+    });
+    services.replaceChildren(...cards.map(renderCard));
     const completed = new Date(snapshot.generated_at);
     refreshState.textContent = `Last refreshed ${completed.toLocaleString()}`;
   } catch (error) {

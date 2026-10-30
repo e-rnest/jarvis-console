@@ -5,7 +5,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 
-from .clients import blacktorrent, jeopardy, label, manifest, receipt, triviarom
+from .clients import blacktorrent, jeopardy, label, manifest, receipt, triviarom, wallboard
 from .clients.common import result
 from .config import Config, ServiceConfig
 
@@ -15,6 +15,7 @@ ADAPTERS = {
     "manifest": manifest.check,
     "jeopardy": jeopardy.check,
     "triviarom": triviarom.check,
+    "wallboard": wallboard.check,
     "blacktorrent": blacktorrent.check,
 }
 

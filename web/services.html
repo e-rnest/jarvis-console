@@ -13,7 +13,7 @@
         <p class="eyebrow">Household service catalog</p>
         <h1>Jarvis Docker Services</h1>
         <p class="summary">What each mounted service owns, how it is reached, what its health means, and the operational rules that keep the household stack dependable.</p>
-        <p class="doc-meta">Verified against mounted Compose files and current implementations on October 21, 2026. Secrets, credentials, tokens, media contents, and private runtime databases are intentionally excluded.</p>
+        <p class="doc-meta">Verified against mounted Compose files, active safe environment values, and current implementations on October 23, 2026. Secrets, credentials, tokens, media contents, device state, and private runtime databases are intentionally excluded. Docker runtime inspection was unavailable, so this is a deployment-source inventory rather than an uptime claim.</p>
       </div>
       <a class="back-link" href="/">Back to Console</a>
     </header>
@@ -28,8 +28,11 @@
         <li><a href="#receipt">Receipt Service</a></li>
         <li><a href="#label">Label Service</a></li>
         <li><a href="#manifest">Manifest</a></li>
+        <li><a href="#manifest-scanner">Manifest Scanner</a></li>
+        <li><a href="#jarvis-scanner">Jarvis Scanner</a></li>
         <li><a href="#jeopardy">Jeopardy Service</a></li>
         <li><a href="#triviarom">TriviaROM</a></li>
+        <li><a href="#wallboard">Wallboard</a></li>
         <li><a href="#jellyfin">Jellyfin</a></li>
         <li><a href="#blacktorrent">BlackTorrent</a></li>
         <li><a href="#scrypted">Scrypted</a></li>
@@ -44,23 +47,26 @@
       <h2>Service map</h2>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Service</th><th>Human entry point</th><th>Published LAN port</th><th>Console status</th></tr></thead>
+          <thead><tr><th>Service / container</th><th>Household entry points and aliases</th><th>Host bind / port</th><th>Docker network / aliases</th><th>Console</th></tr></thead>
           <tbody>
-            <tr><td>Jarvis Console</td><td><a href="http://console.jarvis.home/">console.jarvis.home</a></td><td>8791 → 8080</td><td>Own <code>/health</code></td></tr>
-            <tr><td>Home Assistant</td><td><a href="http://ha.jarvis.home/">ha.jarvis.home</a></td><td>Host network; 8123</td><td>Not in Console; no accepted health contract</td></tr>
-            <tr><td>Matter Server</td><td>Infrastructure service; no general UI</td><td>Host network; 5580</td><td>Not in Console; no accepted health contract</td></tr>
-            <tr><td>Receipt</td><td>API service; no general UI</td><td>8788 → 8080</td><td>Accepted JSON health contract</td></tr>
-            <tr><td>Label</td><td><a href="http://label.jarvis.home/print">label.jarvis.home/print</a></td><td>5050 → 5050</td><td>HTTP process health</td></tr>
-            <tr><td>Manifest</td><td><a href="http://manifest.home/">manifest.home</a></td><td>Reverse-proxied application port 8000</td><td>Accepted JSON health contract</td></tr>
-            <tr><td>Jeopardy</td><td><a href="http://jeopardy.home/">jeopardy.home</a></td><td>8789 → 8080</td><td>Corpus-aware health</td></tr>
-            <tr><td>TriviaROM</td><td><a href="http://trivia.jarvis.home/">trivia.jarvis.home</a></td><td>8790 → 8080</td><td>Corpus counts and readiness</td></tr>
-            <tr><td>Jellyfin</td><td><a href="http://jellyfin.home">jellyfin.home</a></td><td>Known direct service port: 8096</td><td>Unavailable; launch-only</td></tr>
-            <tr><td>BlackTorrent</td><td><a href="http://blacktorrent.home/">blacktorrent.home</a> (<a href="http://blacktorrent.jarvis.home/">backup</a>)</td><td>8080 through Gluetun</td><td>WebUI reachability only</td></tr>
-            <tr><td>Scrypted</td><td>Not established from mounted deployment files</td><td>Host networking; no Compose port map</td><td>Not in Console</td></tr>
+            <tr><td>Jarvis Console<br><code>jarvis-console</code></td><td><a href="http://console.jarvis.home/">console.jarvis.home</a>; <code>jarvis.home:8791</code>; <code>192.168.1.100:8791</code></td><td><code>192.168.1.100:8791</code> → <code>8080</code></td><td>project default + <code>jarvis-receipt-services</code>; hostname <code>jarvis-console</code></td><td>Own <code>/health</code></td></tr>
+            <tr><td>Home Assistant<br><code>homeassistant</code></td><td><a href="http://ha.jarvis.home/">ha.jarvis.home</a>; <a href="http://ha.home/">ha.home</a>; <code>192.168.1.100:8123</code></td><td>host network; <code>8123</code></td><td>host network</td><td>Launch-only card</td></tr>
+            <tr><td>Matter Server<br><code>matterjs-server</code></td><td>Infrastructure only; <code>ws://127.0.0.1:5580/ws</code> from Home Assistant</td><td>host network; <code>5580</code></td><td>host network</td><td>Catalog only</td></tr>
+            <tr><td>Receipt<br><code>receipt-service</code></td><td><code>jarvis.home:8788</code>; <code>192.168.1.100:8788</code>; printer dependency <code>receipt.home</code></td><td><code>192.168.1.100:8788</code> → <code>8080</code>; printer <code>9100</code></td><td>project default + <code>jarvis-receipt-services</code>; <code>receipt-service</code>, <code>morning-brief</code></td><td>JSON health, Morning Brief action, read-only Telegram history</td></tr>
+            <tr><td>Label<br><code>label-service</code></td><td><a href="http://label.jarvis.home/print">label.jarvis.home</a>; <code>jarvis.home:5050</code>; older <code>go.home:5050</code>; printer dependency <code>labeler.home</code></td><td><code>0.0.0.0:5050</code> → <code>5050</code>; printer <code>9100</code></td><td>project default; service alias <code>label-service</code></td><td>HTTP health + four navigation links</td></tr>
+            <tr><td>Manifest<br><code>manifest-service / manifest</code></td><td><a href="http://manifest.home/">manifest.home</a>; <code>192.168.1.100:8000</code></td><td>active <code>192.168.1.100:8000</code> → <code>8000</code></td><td>project default; service alias <code>manifest</code></td><td>JSON health + launch</td></tr>
+            <tr><td>Manifest Scanner<br><code>manifest-scanner</code></td><td>No listener; posts to Manifest's <code>/api/v1/scans</code></td><td>No listener</td><td>project default; outbound HTTP only</td><td>Catalog only</td></tr>
+            <tr><td>Jarvis Scanner<br><code>jarvis-scanner</code></td><td>No listener; observation-only log output</td><td>No listener</td><td><code>network_mode: none</code></td><td>Catalog only</td></tr>
+            <tr><td>Jeopardy<br><code>jeopardy-service</code></td><td><a href="http://jeopardy.home/">jeopardy.home</a>; direct <code>192.168.1.100:8789</code> when LAN-bound</td><td><code>${LAN_BIND_IP:-0.0.0.0}:8789</code> → <code>8080</code></td><td>project default + <code>jarvis-receipt-services</code>; <code>jeopardy-service</code></td><td>Corpus-aware health + launch</td></tr>
+            <tr><td>TriviaROM<br><code>triviarom-service</code></td><td><a href="http://trivia.jarvis.home/">trivia.jarvis.home</a>; <code>192.168.1.100:8790</code></td><td><code>192.168.1.100:8790</code> → <code>8080</code></td><td>project default + <code>jarvis-receipt-services</code>; <code>triviarom-service</code></td><td>Corpus health + launch</td></tr>
+            <tr><td>Wallboard</td><td><a href="http://wallboard.home/">wallboard.home</a></td><td>Not established from mounted sources</td><td>Not established from mounted sources</td><td>JSON health + launch</td></tr>
+            <tr><td>Jellyfin</td><td><a href="http://jellyfin.home">jellyfin.home</a>; known direct <code>192.168.1.100:8096</code></td><td>configured HTTP <code>8096</code>; deployment mapping unavailable</td><td>Not established from mounted sources</td><td>Launch-only + TV Guide</td></tr>
+            <tr><td>BlackTorrent<br><code>gluetun</code> + <code>qbittorrent</code></td><td><a href="http://blacktorrent.home/">blacktorrent.home</a>; <a href="http://blacktorrent.jarvis.home/">blacktorrent.jarvis.home</a>; <code>192.168.1.100:8080</code></td><td><code>192.168.1.100:8080</code> through Gluetun</td><td>qBittorrent uses <code>service:gluetun</code>; no independent path</td><td>WebUI reachability only</td></tr>
+            <tr><td>Scrypted<br><code>scrypted</code></td><td>Canonical household URL not established</td><td>host network; UI port not asserted</td><td>host network</td><td>Catalog only</td></tr>
           </tbody>
         </table>
       </div>
-      <p class="doc-meta">Reverse-proxy and local-DNS definitions live outside these mounted repositories. A hostname shown here is an accepted household entry point, not a declaration that Console manages DNS.</p>
+      <p class="doc-meta">All fixed addresses are on trusted LAN host <code>192.168.1.100</code>. Container IPs are intentionally omitted because Docker assigns them dynamically. Reverse-proxy and local-DNS definitions live outside these repositories; a hostname shown here is an accepted household entry point, not a declaration that Console manages DNS.</p>
     </section>
 
     <section class="doc-section service-heading" id="console">
@@ -91,7 +97,7 @@
         <li>Container <code>homeassistant</code> uses host networking, restart policy <code>unless-stopped</code>, and persistent <code>./config:/config</code> state.</li>
         <li>Synology Reverse Proxy sends both friendly names to <code>192.168.1.100:8123</code>. Home Assistant trusts forwarded headers from <code>192.168.1.100/32</code>, and each proxy rule forwards the WebSocket upgrade.</li>
         <li>Home Assistant connects to the external Matter Server and calls Receipt over LAN HTTP; it does not own either service's persistence or implementation.</li>
-        <li>Console provides navigation only. No accepted Home Assistant health contract or Console action is configured.</li>
+        <li>Console provides a launch-only card with canonical, short-alias, and direct navigation. No accepted Home Assistant health contract or operational action is configured.</li>
       </ul>
       <p class="callout">Deployment, reverse-proxy recovery, integrations, FR24 installation, and migration procedures belong to the Home Assistant project README.</p>
     </section>
@@ -110,12 +116,13 @@
 
     <section class="doc-section service-heading" id="receipt">
       <h2>Receipt Service</h2>
-      <p>Owns thermal receipt printing and the Morning Brief scheduler. Console never reproduces its scheduler or print logic.</p>
+      <p>Owns thermal receipt printing, the Morning Brief scheduler, and encrypted IPPS Telegram delivery/history. Console never reproduces its scheduler, decryption, delivery, or print logic.</p>
       <h3>Deployment and dependencies</h3>
       <ul>
         <li>Container <code>receipt-service</code>, restart <code>unless-stopped</code>, published on <code>192.168.1.100:8788</code>, with a 90-second stop grace period.</li>
         <li>Joins its default network and the external <code>jarvis-receipt-services</code> network, where it has <code>receipt-service</code> and legacy <code>morning-brief</code> aliases.</li>
-        <li>Uses a named persistent schedule-state volume so a claimed daily run survives container replacement.</li>
+        <li>Uses the external <code>morning-brief_schedule-data</code> volume for durable scheduler and Telegram history state. Console mounts that volume read-only.</li>
+        <li>The Console <strong>Thermal Telegram</strong> card reads the newest 50 stored entries through Console's read-only API. It cannot mutate, acknowledge, delete, decrypt, or retry messages.</li>
         <li>Prints raw ESC/POS over TCP to the receipt printer on port 9100. The configured printer is not probed by health.</li>
         <li>Morning Brief gathers its own weather, market, headline, daily-content, and trivia inputs; upstream failures are handled within Receipt rather than by Console.</li>
       </ul>
@@ -179,6 +186,30 @@
       <p class="callout">Manifest owns inventory interpretation. The scanner bridge owns durable capture and delivery. Label Service owns printing. Console only reports Manifest's accepted application health and provides navigation.</p>
     </section>
 
+    <section class="doc-section service-heading" id="manifest-scanner">
+      <h2>Manifest Scanner</h2>
+      <p>Active headless Zebra DS4308 capture-and-delivery bridge for Manifest.</p>
+      <ul>
+        <li>Reads matching Linux evdev keyboard events through read-only <code>/dev/input</code> and <code>/sys/class/input</code> mounts.</li>
+        <li>Mints one UUID after each complete Enter-terminated physical scan, commits it to a SQLite FIFO at <code>/state/queue.db</code>, and only then makes it eligible for delivery.</li>
+        <li>Posts the oldest queued event to Manifest <code>POST /api/v1/scans</code>. Failures retain the same event ID and use bounded exponential backoff; a failed oldest event blocks later events to preserve FIFO order.</li>
+        <li>The container root is read-only, persistent state is <code>./state:/state</code>, Linux device access is read-only, and <code>no-new-privileges</code> is set.</li>
+        <li>It exposes no HTTP listener or accepted Console health contract. Operational status comes from container logs and the built-in <code>--status</code> queue report.</li>
+      </ul>
+      <p class="callout">Never clear the queue merely to resolve a delivery incident. Manifest provides idempotent server-side event processing; deleting pending rows risks silent scan loss.</p>
+    </section>
+
+    <section class="doc-section service-heading" id="jarvis-scanner">
+      <h2>Jarvis Scanner</h2>
+      <p>Older standalone scanner observer retained as a separate deployment. It decodes the same Zebra evdev stream and logs completed barcodes, but has no durable queue and cannot deliver anywhere because Compose sets <code>network_mode: none</code>.</p>
+      <ul>
+        <li>Container <code>jarvis-scanner</code>, restart <code>unless-stopped</code>, read-only root filesystem.</li>
+        <li>Read-only input/sysfs mounts and a read-only character-device cgroup rule.</li>
+        <li>No ports, persistent application state, healthcheck, API, or Console card.</li>
+      </ul>
+      <p class="callout">Do not confuse this logger with Manifest Scanner. Confirm which container should own the physical device before starting both.</p>
+    </section>
+
     <section class="doc-section service-heading" id="jeopardy">
       <h2>Jeopardy Service</h2>
       <p>Read-only clue browser and API backed by a generated SQLite corpus, with Receipt-owned physical clue printing.</p>
@@ -213,6 +244,17 @@
         <li><code>GET /api/trivia/packs</code> lists pack metadata; <code>GET /api/trivia/questions/{id}</code> resolves stable 12-hex-character question IDs.</li>
         <li>All POST routes are rejected. Choice order is deterministic for each question, and direct-ID reads do not alter the recent-history ring.</li>
         <li>The browser supports pack selection, answer reveal, history-safe canonical <code>?id=…</code> links, and 2–4 choice questions.</li>
+      </ul>
+    </section>
+
+    <section class="doc-section service-heading" id="wallboard">
+      <h2>Wallboard</h2>
+      <p>Household wallboard application available at <a href="http://wallboard.home/">wallboard.home</a>.</p>
+      <h3>Console contract</h3>
+      <ul>
+        <li>Console checks <code>GET /health</code> and accepts HTTP 200 JSON with <code>status: ok</code>.</li>
+        <li>The health check proves that the Wallboard application responds; it does not establish kiosk browser, display device, or screen state.</li>
+        <li>Deployment, port, and Docker network details are not present in the mounted sources and are not inferred.</li>
       </ul>
     </section>
 
@@ -262,7 +304,7 @@
         <li>Enables Docker Avahi support and persists server state under the mounted Scrypted volume.</li>
         <li>The runtime data contains installed plugin/device state, including HomeKit components. That private state was not enumerated into this public household catalog.</li>
       </ul>
-      <p class="callout">The mounted Compose file does not declare a canonical browser URL, explicit healthcheck, or fixed image tag. No Scrypted card or shortcut should be added until its accepted LAN URL and truthful health contract are confirmed from the deployed configuration.</p>
+      <p class="callout">The mounted Compose file does not declare a canonical browser URL, explicit healthcheck, or fixed image tag. Scrypted remains catalog-only until its accepted LAN URL is recorded. A future launch link does not by itself justify a healthy badge.</p>
     </section>
 
     <section class="doc-section" id="integrations">
@@ -273,6 +315,7 @@
         <li><strong>Console → Receipt, Jeopardy, TriviaROM:</strong> backend HTTP over the shared <code>jarvis-receipt-services</code> Docker network.</li>
         <li><strong>Console → Label:</strong> backend HTTP through the accepted LAN route on port 5050.</li>
         <li><strong>Console → Manifest:</strong> bounded JSON health request to <code>http://manifest.home/health</code>; browser launch to <code>http://manifest.home/</code>.</li>
+        <li><strong>Console → Wallboard:</strong> bounded JSON health request to <code>http://wallboard.home/health</code>; browser launch to <code>http://wallboard.home/</code>.</li>
         <li><strong>Manifest Scanner → Manifest:</strong> durable queued scan delivery. Console does not inspect the scanner container or queue.</li>
         <li><strong>Console → BlackTorrent:</strong> backend HTTP to the Gluetun-published qBittorrent WebUI.</li>
         <li><strong>Console → Jellyfin:</strong> browser navigation only; no health request.</li>
@@ -322,7 +365,6 @@
     <section class="doc-section" id="gaps">
       <h2>Known documentation gaps</h2>
       <ul>
-        <li>The older root service inventory predates Console, TriviaROM, BlackTorrent, Scrypted, and recent Receipt/Label behavior. This page records the newer source-backed view.</li>
         <li>Jellyfin's mounted directory does not contain its container/Compose definition, so image tag, restart policy, and exact host-volume wiring are not claimed here.</li>
         <li>Scrypted's canonical LAN/reverse-proxy URL and an accepted health endpoint were not present in its Compose file.</li>
         <li>Local DNS and Synology reverse-proxy configuration were not part of the mounted service sources and remain external documentation concerns.</li>

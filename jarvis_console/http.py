@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import sqlite3
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -15,6 +16,7 @@ from .config import Config
 from .status import aggregate
 
 LOG = logging.getLogger(__name__)
+IPPS_HISTORY_DB = Path("/receipt-data/telegram_history.sqlite3")
 WEB_ROOT = Path(__file__).resolve().parent.parent / "web"
 STATIC_FILES = {
     "/": ("index.html", "text/html; charset=utf-8"),
@@ -79,6 +81,31 @@ class ConsoleHandler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.OK, {
                 "status": "ok", "service": "jarvis-console", "version": __version__,
             })
+        elif url.path == "/api/ipps/history":
+            try:
+                # URI mode=ro prevents writes to the persistent history database.
+                with sqlite3.connect(
+                    f"file:{IPPS_HISTORY_DB}?mode=ro", uri=True, timeout=3
+                ) as db:
+                    db.row_factory = sqlite3.Row
+                    entries = db.execute("""
+                        SELECT received_at_utc, sender_name, message_text, public_ip,
+                               city, region, country, print_status
+                        FROM telegram_history
+                        ORDER BY received_at_utc DESC LIMIT 50
+                    """).fetchall()
+                self._json(HTTPStatus.OK, {"messages": [
+                    {"timestamp": r["received_at_utc"], "sender": r["sender_name"],
+                     "message": r["message_text"], "ip": r["public_ip"],
+                     "location": ", ".join(filter(None, (
+                         r["city"], r["region"], r["country"]))) or None,
+                     "status": r["print_status"]}
+                    for r in entries
+                ]})
+            except (sqlite3.Error, OSError):
+                LOG.exception("ipps_history_unavailable")
+                self._json(HTTPStatus.SERVICE_UNAVAILABLE,
+                           {"error": "Message history unavailable"})
         elif url.path == "/api/status":
             self._json(HTTPStatus.OK, aggregate(self.server.config))
         else:
