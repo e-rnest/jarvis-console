@@ -20,7 +20,8 @@ Use the catalog in [ECOSYSTEM.md](ECOSYSTEM.md#service-catalog). Common traps:
 - **Food inventory:** Label Service and Manifest each hold separate inventory data.
 - **Telegram:** this is a feature of Receipt Service, reached through IPPS and ntfy. It does not use the Telegram app or API.
 - **Semavox:** the firmware repository is outside this share, in the user's iCloud Arduino folder.
-- **Wallboard:** not a git repository. Its secrets and state are in `wallboard-private`.
+- **Wallboard:** the canonical Git checkout and Docker build context are both `wallboard/` on this
+  share. Its secrets and state remain separately mounted from `wallboard-private`.
 
 ## 2. Find the contract
 

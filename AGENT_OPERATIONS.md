@@ -56,9 +56,10 @@ kept the Mac awake during approved unattended work. Start it only when needed, k
 process identifiable, and stop it afterward. An agent shell can have different LAN or
 network permissions from Terminal.app.
 
-**Source-verified:** a separate Wallboard checkout exists at `$HOME/dev/wallboard`, with
-remote `https://github.com/e-rnest/wallboard.git`. It had extensive tracked and untracked
-work on 2026-11-05. Do not copy over it, clean it, or assume it matches production.
+**Source-verified (2026-11-06):** Wallboard's canonical Git checkout and Docker build context are
+the same directory: `/volume1/docker/wallboard` on the NAS and `/Volumes/docker/wallboard` on the
+Mac. The former `$HOME/dev/wallboard` checkout was archived, pushed, and removed during
+consolidation. Git operations run from the Mac-mounted checkout; Docker operations run on the NAS.
 
 ### Synology deployment environment
 
@@ -107,7 +108,7 @@ below records how source reaches production; it does not claim that a container 
 | Project | Production definition | Update mechanism from source | Persistent/runtime boundary |
 | --- | --- | --- | --- |
 | Console | `jarvis-console/compose.yaml`, `Dockerfile` | Local image build from `/volume1/docker/jarvis-console`; recreate required for Python, static assets, Compose, or served-doc changes | External Receipt history volume mounted read-only |
-| Wallboard | `wallboard/compose.yaml`, `Dockerfile` | Local image build from `/volume1/docker/wallboard`; distinct from `$HOME/dev/wallboard` | `wallboard-private` bind mounts credentials, token, local config, caches, histories, and NFL state |
+| Wallboard | `wallboard/compose.yaml`, `Dockerfile` | Canonical Git checkout and local image build at `/volume1/docker/wallboard` | `wallboard-private` bind mounts credentials, token, local config, caches, histories, and NFL state |
 | Receipt | `receipt-service/compose.yaml`, `Dockerfile` | Local image build from the deployment directory | External `morning-brief_schedule-data`; private key is a Compose secret |
 | Label | `label-service/compose.yaml`, `Dockerfile` | Local image plus `.:/app` bind mount; source edits may be visible without an image rebuild, but reload behavior still depends on the process | Inventory/runtime files live in the mounted project tree; printer is external hardware |
 | Manifest | `manifest-service/compose.yaml`, `Dockerfile` | Local tagged image built from `MANIFEST_BUILD_CONTEXT` | `data/` writable database, `catalog/` read-only, `backups/` mounted; container root is read-only |
@@ -423,9 +424,6 @@ patch only the necessary lines, and review the final diff.
   remain operational on that revision.
 - Current DNS and Synology reverse-proxy records, which live outside these repositories.
 - The active Jellyfin container definition and its update mechanism.
-- Whether `$HOME/dev/wallboard` is still the intended upstream development checkout and how
-  approved changes are reconciled into `/volume1/docker/wallboard` without losing either
-  directory's existing work.
 - Whether an agent-instruction entry point should be added to the Semavox repository. It
   currently has no `AGENTS.md` or `CLAUDE.md`, is outside this workspace's writable roots,
   and contains concurrent Digital Rain/other work; add only in a separately authorized
