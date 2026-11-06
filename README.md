@@ -278,3 +278,8 @@ against the address table in [SERVICE_CATALOG.md](SERVICE_CATALOG.md).
   functionality, not a public API.
 - Reverse proxy and DNS remain external configuration and must be maintained
   alongside the source-backed catalog.
+
+
+## Related projects
+
+Cross-service contracts are in the [integration directory](INTEGRATIONS.md), and the full map is in the [ecosystem guide](ECOSYSTEM.md). Coding agents must read the [operations playbook](AGENT_OPERATIONS.md) and [AGENTS.md](AGENTS.md).
