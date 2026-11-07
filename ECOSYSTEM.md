@@ -1,6 +1,6 @@
 # Jarvis ecosystem map
 
-Audited on 2026-11-05 by static inspection of source and configuration. **No container,
+Audited on 2026-11-06 by static inspection of source and configuration. **No container,
 DNS record, proxy rule or device was queried**, so "deployed" here means "deployment is
 defined in this directory", not "confirmed running". Agents should begin with
 [START_HERE.md](START_HERE.md) and [AGENT_OPERATIONS.md](AGENT_OPERATIONS.md). The older [SERVICE_CATALOG.md](SERVICE_CATALOG.md) dates
@@ -54,7 +54,7 @@ flowchart LR
   HA -->|WebSocket| MATTER
   ZEBRA --> MSCAN -->|scans| MAN
   MAN -->|print labels| LABEL --> QL
-  CONSOLE -->|health| RECEIPT & JEOP & TRIVIA & LABEL & MAN & WALL
+  CONSOLE -->|health/status| RECEIPT & JEOP & TRIVIA & LABEL & MAN & WALL & SEMA & HA & JELLY
   CONSOLE -->|morning brief| RECEIPT
 ```
 

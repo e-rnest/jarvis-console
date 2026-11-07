@@ -13,11 +13,15 @@ class StatusRequestError(Exception):
     """The downstream response could not establish trustworthy status."""
 
 
-def fetch_json(url: str, timeout: float) -> tuple[int, dict]:
-    request = Request(url, headers={
+def fetch_json(url: str, timeout: float,
+               headers: dict[str, str] | None = None) -> tuple[int, dict]:
+    request_headers = {
         "Accept": "application/json",
         "User-Agent": "jarvis-console/1.0",
-    })
+    }
+    if headers:
+        request_headers.update(headers)
+    request = Request(url, headers=request_headers)
     try:
         response = urlopen(request, timeout=timeout)
     except HTTPError as exc:

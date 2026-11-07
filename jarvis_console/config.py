@@ -14,6 +14,7 @@ class ServiceConfig:
     status_url: str | None
     launch_url: str | None
     secondary_links: tuple[tuple[str, str], ...] = ()
+    status_bearer_token: str | None = None
 
 
 @dataclass(frozen=True)
@@ -43,6 +44,15 @@ def _status_url(name: str, default: str) -> str:
     return value
 
 
+def _optional_token(name: str) -> str | None:
+    value = os.environ.get(name, "").strip()
+    if not value:
+        return None
+    if len(value) > 4096 or any(not 33 <= ord(character) <= 126 for character in value):
+        raise ValueError(f"{name} must contain printable non-whitespace ASCII")
+    return value
+
+
 def load_config() -> Config:
     try:
         port = int(os.environ.get("HTTP_PORT", "8080"))
@@ -61,9 +71,12 @@ def load_config() -> Config:
         "MORNING_BRIEF_URL", "http://receipt-service:8080/print/morning"
     )
 
+    home_assistant_token = _optional_token("HOME_ASSISTANT_TOKEN")
     services = (
         ServiceConfig(
-            "homeassistant", "Home Assistant", None,
+            "homeassistant", "Home Assistant",
+            _status_url("HOME_ASSISTANT_STATUS_URL", "http://192.168.1.100:8123/api/")
+            if home_assistant_token else None,
             _url("HOME_ASSISTANT_LAUNCH_URL", "http://ha.jarvis.home/"),
             (
                 ("Short alias", _url(
@@ -73,6 +86,7 @@ def load_config() -> Config:
                     "HOME_ASSISTANT_DIRECT_URL", "http://192.168.1.100:8123/",
                 )),
             ),
+            home_assistant_token,
         ),
         ServiceConfig(
             "receipt", "Receipt Service",
@@ -130,7 +144,11 @@ def load_config() -> Config:
             )),),
         ),
         ServiceConfig(
-            "jellyfin", "Jellyfin", None,
+            "jellyfin", "Jellyfin",
+            _status_url(
+                "JELLYFIN_STATUS_URL",
+                "http://192.168.1.100:8096/System/Info/Public",
+            ),
             _url("JELLYFIN_LAUNCH_URL", "http://jellyfin.home"),
             (("TV Guide", _url(
                 "JELLYFIN_TV_GUIDE_URL",
@@ -138,7 +156,8 @@ def load_config() -> Config:
             )),),
         ),
         ServiceConfig(
-            "semavox", "Semavox", None,
+            "semavox", "Semavox",
+            _status_url("SEMAVOX_STATUS_URL", "http://semavox.home/api/status"),
             _url("SEMAVOX_LAUNCH_URL", "http://semavox.home"),
             (
                 ("Fixed IP", _url(

@@ -34,7 +34,10 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(services["receipt"].secondary_links, ((
             "GitHub", "https://github.com/e-rnest/receipt-service",
         ),))
-        self.assertIsNone(services["jellyfin"].status_url)
+        self.assertEqual(
+            services["jellyfin"].status_url,
+            "http://192.168.1.100:8096/System/Info/Public",
+        )
         self.assertEqual(config.morning_brief_url,
                          "http://receipt-service:8080/print/morning")
         self.assertEqual(services["label"].launch_url,
@@ -63,7 +66,8 @@ class ConfigTests(unittest.TestCase):
             "TV Guide",
             "http://jellyfin.home/web/#/livetv?collectionType=livetv&tab=1",
         ),))
-        self.assertIsNone(services["semavox"].status_url)
+        self.assertEqual(services["semavox"].status_url,
+                         "http://semavox.home/api/status")
         self.assertEqual(services["semavox"].name, "Semavox")
         self.assertEqual(services["semavox"].launch_url,
                          "http://semavox.home")
@@ -77,6 +81,15 @@ class ConfigTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "between 0.1 and 10"):
                 load_config()
 
+    def test_home_assistant_token_enables_authenticated_status(self):
+        with patch.dict(os.environ, {"HOME_ASSISTANT_TOKEN": "test-token"}, clear=True):
+            services = {service.key: service for service in load_config().services}
+        self.assertEqual(
+            services["homeassistant"].status_url,
+            "http://192.168.1.100:8123/api/",
+        )
+        self.assertEqual(services["homeassistant"].status_bearer_token, "test-token")
+
     def test_compose_preserves_network_and_port_contract(self):
         compose = (ROOT / "compose.yaml").read_text()
         self.assertTrue(compose.startswith("name: jarvis-console\n"))
@@ -89,6 +102,9 @@ class ConfigTests(unittest.TestCase):
                       compose)
         self.assertIn("HOME_ASSISTANT_LAUNCH_URL: ${HOME_ASSISTANT_LAUNCH_URL:-http://ha.jarvis.home/}",
                       compose)
+        self.assertIn("HOME_ASSISTANT_STATUS_URL: ${HOME_ASSISTANT_STATUS_URL:-http://192.168.1.100:8123/api/}",
+                      compose)
+        self.assertIn("HOME_ASSISTANT_TOKEN: ${HOME_ASSISTANT_TOKEN:-}", compose)
         self.assertIn("BLACKTORRENT_STATUS_URL: ${BLACKTORRENT_STATUS_URL:-http://192.168.1.100:8080/}",
                       compose)
         self.assertIn("MANIFEST_STATUS_URL: ${MANIFEST_STATUS_URL:-http://manifest.home/health}",
@@ -107,7 +123,11 @@ class ConfigTests(unittest.TestCase):
                       compose)
         self.assertIn("JELLYFIN_TV_GUIDE_URL: ${JELLYFIN_TV_GUIDE_URL:-http://jellyfin.home/web/#/livetv?collectionType=livetv&tab=1}",
                       compose)
+        self.assertIn("JELLYFIN_STATUS_URL: ${JELLYFIN_STATUS_URL:-http://192.168.1.100:8096/System/Info/Public}",
+                      compose)
         self.assertIn("SEMAVOX_LAUNCH_URL: ${SEMAVOX_LAUNCH_URL:-http://semavox.home}",
+                      compose)
+        self.assertIn("SEMAVOX_STATUS_URL: ${SEMAVOX_STATUS_URL:-http://semavox.home/api/status}",
                       compose)
         self.assertIn("SEMAVOX_FALLBACK_URL: ${SEMAVOX_FALLBACK_URL:-http://192.168.1.80}",
                       compose)

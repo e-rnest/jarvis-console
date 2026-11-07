@@ -5,11 +5,15 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 
-from .clients import blacktorrent, jeopardy, label, manifest, receipt, triviarom, wallboard
+from .clients import (
+    blacktorrent, homeassistant, jellyfin, jeopardy, label, manifest, receipt,
+    semavox, triviarom, wallboard,
+)
 from .clients.common import result
 from .config import Config, ServiceConfig
 
 ADAPTERS = {
+    "homeassistant": homeassistant.check,
     "receipt": receipt.check,
     "label": label.check,
     "manifest": manifest.check,
@@ -17,6 +21,8 @@ ADAPTERS = {
     "triviarom": triviarom.check,
     "wallboard": wallboard.check,
     "blacktorrent": blacktorrent.check,
+    "semavox": semavox.check,
+    "jellyfin": jellyfin.check,
 }
 
 

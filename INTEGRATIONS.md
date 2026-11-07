@@ -1,6 +1,6 @@
 # Jarvis integration directory
 
-Source-verified on 2026-11-05 by static reading, unless a row says otherwise. Nothing here was
+Source-verified on 2026-11-06 by static reading, unless a row says otherwise. Nothing here was
 exercised live. Authentication is **none** for all LAN routes. "Owner" is the side that should
 change first and notify the other.
 
@@ -35,10 +35,15 @@ change first and notify the other.
 | TriviaROM | `triviarom-service:8080/health` | Corpus counts | `clients/triviarom.py` |
 | Wallboard | `wallboard.home/health` | `status: ok`. **Wallboard returns `{"ok": true}`, so see the mismatch below.** | `clients/wallboard.py` |
 | BlackTorrent | `192.168.1.100:8080/` | Any 2xx; proves only WebUI reachability | `clients/blacktorrent.py` |
+| Home Assistant | `192.168.1.100:8123/api/` | Authenticated HTTP 200 with exact `{"message":"API running."}`; omitted when no token is configured | `clients/homeassistant.py` |
+| Jellyfin | `192.168.1.100:8096/System/Info/Public` | HTTP 200 Jellyfin identity/version with completed startup wizard | `clients/jellyfin.py` |
+| Semavox | `semavox.home/api/status` | HTTP 200 with the documented online message, uptime, audio, volume, startup-chime, and label schema | `clients/semavox.py` |
 | Receipt print | `POST receipt-service:8080/print/morning` | One guarded request, never retried | `actions.py` |
 | Telegram history | `/receipt-data/telegram_history.sqlite3`, read-only | Receipt's schema | `http.py` |
 
-Home Assistant, Jellyfin and Semavox are launch links only.
+Home Assistant is launch-only when its token is absent. Jellyfin and Semavox have
+read-only status checks. These prove only their documented API contracts—not Home
+Assistant integrations, Jellyfin playback/transcoding/Live TV, or Semavox hardware.
 
 ## Known contract problems
 

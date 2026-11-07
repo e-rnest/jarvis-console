@@ -3,6 +3,7 @@
 const services = document.querySelector("#services");
 const refreshButton = document.querySelector("#refresh");
 const refreshState = document.querySelector("#refresh-state");
+const consoleBuild = document.querySelector("#console-build");
 
 function element(tag, className, text) {
   const node = document.createElement(tag);
@@ -59,6 +60,17 @@ function renderCard(service) {
     addDetail(details, "Playable", service.details.playable_record_count.toLocaleString());
     addDetail(details, "Archive", service.details.record_count.toLocaleString());
     addDetail(details, "Datasets", service.details.dataset_count.toLocaleString());
+    card.append(details);
+  } else if (service.key === "jellyfin" && service.details) {
+    const details = element("dl", "details");
+    addDetail(details, "Server", service.details.server_name);
+    addDetail(details, "Version", service.details.version);
+    card.append(details);
+  } else if (service.key === "semavox" && service.details) {
+    const details = element("dl", "details");
+    addDetail(details, "Uptime", `${service.details.uptime_seconds.toLocaleString()} sec`);
+    addDetail(details, "Audio", service.details.audio_ready ? "Ready" : "Unavailable");
+    addDetail(details, "Volume", `${service.details.volume_percent}%`);
     card.append(details);
   }
 
@@ -165,6 +177,12 @@ async function refresh() {
     if (!response.ok) throw new Error(`Console returned HTTP ${response.status}`);
     const snapshot = await response.json();
     if (!Array.isArray(snapshot.services)) throw new Error("Console returned an invalid snapshot");
+    if (snapshot.console && typeof snapshot.console.version === "string"
+        && typeof snapshot.console.build === "string") {
+      consoleBuild.textContent = `Jarvis Console v${snapshot.console.version} · build ${snapshot.console.build}`;
+    } else {
+      consoleBuild.textContent = "Jarvis Console build unavailable";
+    }
     const receipt = snapshot.services.find(service => service.key === "receipt");
     const cards = snapshot.services.flatMap(service => {
       if (service.key !== "receipt") return [service];

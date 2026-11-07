@@ -37,6 +37,20 @@ TRIVIA_OK = {
     "record_count": 145600,
     "playable_record_count": 137173,
 }
+JELLYFIN_OK = {
+    "ServerName": "jellyfin",
+    "Version": "10.11.0",
+    "ProductName": "Jellyfin",
+    "Id": "0123456789abcdef",
+    "StartupWizardCompleted": True,
+}
+SEMAVOX_OK = {
+    "message": "ONLINE | IP: 192.168.1.80 | Uptime: 1707 seconds",
+    "audio": True,
+    "volume": 75,
+    "startupChime": False,
+    "label": "Semavox",
+}
 RECEIPT_PRINT_OK = {
     "status": "sent",
     "bytes": 1234,
@@ -48,6 +62,8 @@ DROP_CONNECTION = object()
 
 class FakeHandler(BaseHTTPRequestHandler):
     def do_GET(self):
+        with self.server.request_lock:
+            self.server.get_headers.append((self.path, self.headers.get("Authorization")))
         response = self.server.responses.get(self.path)
         if response is None:
             status, body, delay = 404, {"error": "missing"}, 0
@@ -99,6 +115,7 @@ def fake_downstreams(responses):
     server.daemon_threads = True
     server.responses = responses
     server.post_paths = []
+    server.get_headers = []
     server.request_lock = threading.Lock()
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -115,9 +132,10 @@ def configuration(base_url: str, timeout: float = 0.25,
     return Config("127.0.0.1", 0, timeout,
                   f"{base_url}/print/morning", action_timeout, (
         ServiceConfig(
-            "homeassistant", "Home Assistant", None,
+            "homeassistant", "Home Assistant", f"{base_url}/homeassistant",
             "http://launch/homeassistant",
             (("Direct", "http://launch/homeassistant/direct"),),
+            "test-home-assistant-token",
         ),
         ServiceConfig(
             "receipt", "Receipt Service", f"{base_url}/receipt", None,
@@ -133,11 +151,11 @@ def configuration(base_url: str, timeout: float = 0.25,
         ServiceConfig("blacktorrent", "BlackTorrent", f"{base_url}/blacktorrent",
                       "http://launch/blacktorrent"),
         ServiceConfig(
-            "jellyfin", "Jellyfin", None, "http://launch/jellyfin",
+            "jellyfin", "Jellyfin", f"{base_url}/jellyfin", "http://launch/jellyfin",
             (("TV Guide", "http://launch/jellyfin/tv"),),
         ),
         ServiceConfig(
-            "semavox", "Semavox", None, "http://launch/semavox",
+            "semavox", "Semavox", f"{base_url}/semavox", "http://launch/semavox",
             (
                 ("Fixed IP", "http://192.168.1.80"),
                 ("GitHub", "https://github.com/e-rnest/semavox"),
@@ -149,12 +167,15 @@ def configuration(base_url: str, timeout: float = 0.25,
 def healthy_responses():
     return {
         "/receipt": (200, RECEIPT_OK, 0),
+        "/homeassistant": (200, {"message": "API running."}, 0),
         "/label": (200, {"status": "ok"}, 0),
         "/manifest": (200, {"status": "ok"}, 0),
         "/jeopardy": (200, {"status": "ok"}, 0),
         "/trivia": (200, TRIVIA_OK, 0),
         "/blacktorrent": (200, b"<html>qBittorrent</html>", 0),
         "/wallboard": (200, {"status": "ok"}, 0),
+        "/semavox": (200, SEMAVOX_OK, 0),
+        "/jellyfin": (200, JELLYFIN_OK, 0),
     }
 
 
@@ -163,16 +184,16 @@ def by_key(snapshot):
 
 
 class AggregationTests(unittest.TestCase):
-    def test_all_supported_services_healthy_and_jellyfin_unavailable(self):
-        with fake_downstreams(healthy_responses()) as (base, _):
+    def test_all_supported_services_healthy(self):
+        with fake_downstreams(healthy_responses()) as (base, downstream):
             statuses = by_key(aggregate(configuration(base)))
         self.assertEqual(
             {key: value["status"] for key, value in statuses.items()},
             {"receipt": "healthy", "label": "healthy", "manifest": "healthy",
              "jeopardy": "healthy",
              "triviarom": "healthy", "wallboard": "healthy", "blacktorrent": "healthy",
-             "homeassistant": "unavailable", "jellyfin": "unavailable",
-             "semavox": "unavailable"},
+             "homeassistant": "healthy", "jellyfin": "healthy",
+             "semavox": "healthy"},
         )
         self.assertIsNone(statuses["receipt"]["launch_url"])
         self.assertEqual(statuses["receipt"]["secondary_links"], [{
@@ -183,6 +204,53 @@ class AggregationTests(unittest.TestCase):
                          "Household wallboard responding")
         self.assertEqual(statuses["wallboard"]["launch_url"],
                          "http://launch/wallboard")
+        self.assertEqual(statuses["semavox"]["details"], {
+            "uptime_seconds": 1707,
+            "audio_ready": True,
+            "volume_percent": 75,
+            "startup_chime": False,
+            "label": "Semavox",
+        })
+        self.assertIn(
+            ("/homeassistant", "Bearer test-home-assistant-token"),
+            downstream.get_headers,
+        )
+        self.assertEqual(statuses["jellyfin"]["details"], {
+            "server_name": "jellyfin", "version": "10.11.0",
+        })
+
+    def test_jellyfin_incomplete_setup_is_failed(self):
+        responses = healthy_responses()
+        responses["/jellyfin"] = (
+            200, JELLYFIN_OK | {"StartupWizardCompleted": False}, 0,
+        )
+        with fake_downstreams(responses) as (base, _):
+            jellyfin = by_key(aggregate(configuration(base)))["jellyfin"]
+        self.assertEqual(jellyfin["status"], "failed")
+
+    def test_home_assistant_rejects_wrong_api_shape(self):
+        responses = healthy_responses()
+        responses["/homeassistant"] = (200, {"message": "not ready"}, 0)
+        with fake_downstreams(responses) as (base, _):
+            homeassistant = by_key(aggregate(configuration(base)))["homeassistant"]
+        self.assertEqual(homeassistant["status"], "unknown")
+
+    def test_semavox_audio_unavailable_does_not_overstate_device_failure(self):
+        responses = healthy_responses()
+        responses["/semavox"] = (200, SEMAVOX_OK | {"audio": False}, 0)
+        with fake_downstreams(responses) as (base, _):
+            semavox = by_key(aggregate(configuration(base)))["semavox"]
+        self.assertEqual(semavox["status"], "healthy")
+        self.assertEqual(semavox["summary"],
+                         "Device API responding; audio unavailable")
+        self.assertIs(semavox["details"]["audio_ready"], False)
+
+    def test_semavox_schema_mismatch_is_unknown(self):
+        responses = healthy_responses()
+        responses["/semavox"] = (200, {"message": "ONLINE"}, 0)
+        with fake_downstreams(responses) as (base, _):
+            semavox = by_key(aggregate(configuration(base)))["semavox"]
+        self.assertEqual(semavox["status"], "unknown")
 
     def test_receipt_identity_and_scheduler_details_are_normalized(self):
         with fake_downstreams(healthy_responses()) as (base, _):
@@ -296,7 +364,8 @@ class AggregationTests(unittest.TestCase):
         statuses = by_key(aggregate(config))
         self.assertTrue(all(statuses[key]["status"] == "unknown"
                             for key in ("receipt", "label", "manifest", "jeopardy", "triviarom",
-                                        "wallboard", "blacktorrent")))
+                                        "wallboard", "blacktorrent", "semavox", "homeassistant",
+                                        "jellyfin")))
 
     def test_timeout_is_unknown(self):
         responses = healthy_responses()
@@ -317,37 +386,32 @@ class AggregationTests(unittest.TestCase):
         self.assertLess(elapsed, 0.28)
         self.assertTrue(all(statuses[key]["status"] == "unknown"
                             for key in ("receipt", "label", "manifest", "jeopardy", "triviarom",
-                                        "wallboard", "blacktorrent")))
+                                        "wallboard", "blacktorrent", "homeassistant", "jellyfin",
+                                        "semavox")))
 
-    def test_jellyfin_makes_no_health_request(self):
+    def test_jellyfin_status_keeps_navigation_links(self):
         responses = healthy_responses()
         with fake_downstreams(responses) as (base, downstream):
             statuses = by_key(aggregate(configuration(base)))
-        self.assertEqual(statuses["jellyfin"]["status"], "unavailable")
+        self.assertEqual(statuses["jellyfin"]["status"], "healthy")
         self.assertEqual(statuses["jellyfin"]["launch_url"], "http://launch/jellyfin")
         self.assertEqual(statuses["jellyfin"]["secondary_links"], [
             {"label": "TV Guide", "url": "http://launch/jellyfin/tv"},
         ])
         self.assertEqual(set(responses), {"/receipt", "/label", "/manifest",
-                                          "/jeopardy", "/trivia",
-                                          "/wallboard", "/blacktorrent"})
+                                          "/jeopardy", "/trivia", "/homeassistant",
+                                          "/wallboard", "/blacktorrent", "/semavox",
+                                          "/jellyfin"})
         self.assertEqual(downstream.post_paths, [])
 
-    def test_home_assistant_is_launch_only_with_no_health_request(self):
+    def test_home_assistant_status_keeps_secondary_links(self):
         responses = healthy_responses()
         with fake_downstreams(responses) as (base, _):
             statuses = by_key(aggregate(configuration(base)))
-        self.assertEqual(statuses["homeassistant"], {
-            "key": "homeassistant",
-            "name": "Home Assistant",
-            "status": "unavailable",
-            "summary": "Health status is not available",
-            "launch_url": "http://launch/homeassistant",
-            "secondary_links": [{
-                "label": "Direct",
-                "url": "http://launch/homeassistant/direct",
-            }],
-        })
+        self.assertEqual(statuses["homeassistant"]["status"], "healthy")
+        self.assertEqual(statuses["homeassistant"]["secondary_links"], [{
+            "label": "Direct", "url": "http://launch/homeassistant/direct",
+        }])
 
 
 class ConsoleHTTPTests(unittest.TestCase):
@@ -371,6 +435,8 @@ class ConsoleHTTPTests(unittest.TestCase):
         self.assertEqual(response.status, 200)
         self.assertEqual(payload["status"], "ok")
         self.assertEqual(payload["service"], "jarvis-console")
+        self.assertEqual(payload["version"], "1.1.0")
+        self.assertEqual(payload["build"], "2026.11.06.1")
 
     def test_status_api_does_not_leak_internal_targets(self):
         with fake_downstreams(healthy_responses()) as (base, _):
@@ -381,7 +447,12 @@ class ConsoleHTTPTests(unittest.TestCase):
         self.assertNotIn(base, body)
         self.assertNotIn("http://receipt-service:", body)
         self.assertNotIn("http://triviarom-service:", body)
+        self.assertNotIn("test-home-assistant-token", body)
         self.assertIn("http://launch/trivia", body)
+        payload = json.loads(body)
+        self.assertEqual(payload["console"], {
+            "version": "1.1.0", "build": "2026.11.06.1",
+        })
 
     def test_static_page_has_required_structure_and_no_internal_hostnames(self):
         html = (ROOT / "web/index.html").read_text()
@@ -391,7 +462,9 @@ class ConsoleHTTPTests(unittest.TestCase):
         self.assertIn('id="refresh"', html)
         self.assertIn('id="services"', html)
         self.assertIn('href="/services"', html)
+        self.assertIn('id="console-build"', html)
         self.assertIn('fetch("/api/status"', script)
+        self.assertIn("Jarvis Console v${snapshot.console.version}", script)
         self.assertIn('fetch("/api/actions/morning-brief"', script)
         self.assertIn("Print Morning Brief", script)
         self.assertIn('"Receipt Service"', script)

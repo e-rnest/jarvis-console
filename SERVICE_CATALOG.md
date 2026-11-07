@@ -1,8 +1,9 @@
 # Jarvis service catalog
 
 This is the source-backed inventory for the Docker services mounted under
-`/volume1/docker` on the Jarvis host. It was reconciled against the service
-Compose files, application configuration, and READMEs on 2026-10-22. The same
+`/volume1/docker` on the Jarvis host and the Semavox device that participates
+in the same household ecosystem. It was reconciled against the service Compose
+files, application configuration, READMEs, and API/integration docs on 2026-11-06. The same
 inventory is available on the LAN as the Console's
 [HTML service catalog](http://console.jarvis.home/services).
 
@@ -32,7 +33,7 @@ service/network alias or the fixed Jarvis LAN address instead.
 | Project / component | Container or Compose service | Household entry points and aliases | Host bind / service port | Docker network and aliases | Console representation |
 | --- | --- | --- | --- | --- | --- |
 | Jarvis Console | `jarvis-console` | `console.jarvis.home`; direct `jarvis.home:8791`; `192.168.1.100:8791` | `192.168.1.100:8791` → `8080` | project default + `jarvis-receipt-services`; hostname `jarvis-console` | Own process health and service dashboard |
-| Home Assistant | `homeassistant` | `ha.jarvis.home`; `ha.home`; direct `192.168.1.100:8123` | host network, application `8123` | host network | Launch-only card; no accepted Console health contract |
+| Home Assistant | `homeassistant` | `ha.jarvis.home`; `ha.home`; direct `192.168.1.100:8123` | host network, application `8123` | host network | Authenticated API status when a dedicated token is configured; otherwise launch-only |
 | Matter Server | `matterjs-server` | Infrastructure only; Home Assistant uses `ws://127.0.0.1:5580/ws` | host network, service `5580` | host network | Catalog only; no general UI or accepted health contract |
 | Receipt Service | `receipt-service` | API at `jarvis.home:8788` / `192.168.1.100:8788`; printer DNS `receipt.home` is a dependency, not the service | `192.168.1.100:8788` → `8080`; printer `9100` | project default + `jarvis-receipt-services`; aliases `receipt-service`, `morning-brief` | Health, scheduler detail, Morning Brief action, read-only Telegram history, repository link |
 | Label Service | `label-service` | `label.jarvis.home`; direct/integration route `jarvis.home:5050`; older docs also reference `go.home:5050`; printer DNS `labeler.home` is a dependency | `0.0.0.0:5050` → `5050`; printer `9100` | project default; service name `label-service` | Health, Print, Quick Labels, Fridge, and Freezer links |
@@ -41,11 +42,11 @@ service/network alias or the fixed Jarvis LAN address instead.
 | Jarvis Scanner | `jarvis-scanner` (Compose service `scanner`) | No listener; observation-only barcode logging | no listener | `network_mode: none` | Catalog only; legacy standalone scanner, not a Manifest delivery path |
 | Jeopardy Service | `jeopardy-service` | `jeopardy.home`; direct `192.168.1.100:8789` when bound to the Jarvis LAN address | `${LAN_BIND_IP:-0.0.0.0}:8789` → `8080` | project default + `jarvis-receipt-services`; hostname/service alias `jeopardy-service` | Corpus-aware health and launch card |
 | TriviaROM | `triviarom-service` | `trivia.jarvis.home`; direct `192.168.1.100:8790` | `192.168.1.100:8790` → `8080` | project default + `jarvis-receipt-services`; hostname/service alias `triviarom-service` | Corpus counts and launch card |
-| Wallboard | deployment details not present in the mounted sources | `wallboard.home` | not established from mounted sources | not established from mounted sources | JSON health and launch card |
+| Wallboard | `wallboard` | `wallboard.home`; direct `192.168.1.100:8787` | `192.168.1.100:8787` → `8787` | project default; no external network declared | Launch card; status currently `unknown` because its payload does not match Console's adapter |
 | BlackTorrent / Gluetun | `gluetun` | `blacktorrent.home`; `blacktorrent.jarvis.home`; direct `192.168.1.100:8080` | `192.168.1.100:8080` → shared namespace port `8080` | project default; owns the qBittorrent network namespace and published port | WebUI reachability and two launch links |
 | BlackTorrent / qBittorrent | `qbittorrent` | Same browser aliases as Gluetun's published WebUI | no independent published port | `network_mode: service:gluetun` | Represented by the BlackTorrent card; no independent control |
-| Jellyfin | deployment definition not present in the mounted directory; configured server name `jellyfin` | `jellyfin.home`; known direct route `192.168.1.100:8096` | configured HTTP `8096`; exact container mapping is not source-backed here | unknown from mounted sources | Launch and TV Guide links; no accepted health contract |
-| Semavox | ESP32-S3 firmware (not a container) | `semavox.home`; fixed IP fallback `192.168.1.80`; HTTP API preserves `/api/speak`, `/api/audio`, and `/api/status` | device HTTP port `80` | trusted LAN device; no Docker network | Launch-only card, fixed-IP fallback, and repository link; `/api/status` is not treated as a stable health contract |
+| Jellyfin | deployment definition not present in the mounted directory; configured server name `jellyfin` | `jellyfin.home`; known direct route `192.168.1.100:8096` | configured HTTP `8096`; exact container mapping is not source-backed here | unknown from mounted sources | Public system-info status, launch, and TV Guide links |
+| Semavox | ESP32-S3 firmware (not a container) | `semavox.home`; fixed IP fallback `192.168.1.80`; HTTP API preserves `/api/speak`, `/api/audio`, and `/api/status` | device HTTP port `80` | trusted LAN device; no Docker network | Validated device-status card, launch, fixed-IP fallback, and repository link |
 | Scrypted | `scrypted` | Canonical household URL not established in mounted sources | host network; UI port not asserted here | host network | Catalog only until a verified LAN URL and health contract exist |
 
 ## Health contracts
@@ -58,9 +59,12 @@ service/network alias or the fixed Jarvis LAN address instead.
 | Manifest | `GET /health` → HTTP 200 JSON with `status: ok` | Inventory application responds | Scanner process, scanner device, or queue depth |
 | Jeopardy | `GET /health` with accepted healthy response | HTTP process and readable clue corpus | Receipt printer availability |
 | TriviaROM | `GET /health` with valid corpus counts | Loaded and validated trivia corpus | Content suitability or Receipt availability |
-| Wallboard | `GET /health` → HTTP 200 JSON with `status: ok` | Wallboard application responds | Display device, kiosk browser, or screen state |
+| Wallboard | Console expects HTTP 200 JSON with `status: ok`, but Wallboard returns `{"ok": true}` | No healthy state is currently established; Console reports `unknown` | Display device, kiosk browser, screen state, or application health until the contract is reconciled |
 | BlackTorrent | unauthenticated `GET /` returns 2xx | qBittorrent WebUI is reachable through the published Gluetun namespace | VPN tunnel, `tun0`, leak safety, or container state |
-| Home Assistant, Matter Server, Manifest Scanner, Jarvis Scanner, Jellyfin, Semavox, Scrypted | no accepted Console contract | Nothing is probed | Console must not infer health from a homepage, evolving status API, or deployment presence |
+| Semavox | `GET /api/status` → HTTP 200 with the accepted online/uptime/audio/volume/startup-chime/label schema | Device HTTP API and documented status schema respond | Panel output, speaker playback, microphone, RTC/time sync, alerts, scenes, or flashed feature set |
+| Home Assistant | Authenticated `GET /api/` → HTTP 200 exact `{"message":"API running."}` | Home Assistant's authenticated REST API responds | Integrations, automations, Matter, devices, or frontend WebSocket health |
+| Jellyfin | `GET /System/Info/Public` → HTTP 200 Jellyfin identity/version with completed startup wizard | Jellyfin's public system API and initialized server respond | Libraries, playback, transcoding, Live TV, plugins, or media mounts |
+| Matter Server, Manifest Scanner, Jarvis Scanner, Scrypted | no accepted Console contract | Nothing is probed | Console must not infer health from a homepage, evolving status API, or deployment presence |
 
 Console status words are strict: **healthy** is a validated contract,
 **failed** is an explicit supported failure, **unknown** means the check could
@@ -98,13 +102,20 @@ not establish truth, and **unavailable** means no accepted check is configured.
   LAN routes.
 - Jeopardy delegates clue printing to Receipt. Receipt consumes TriviaROM and
   Jeopardy content and may call Label through the LAN route.
+- Receipt sends one best-effort Semavox alert only after an encrypted IPPS
+  message prints successfully. Alert failure never changes print success.
+- Wallboard owns NFL event detection and submits best-effort NFL alerts to
+  Semavox. Semavox owns presentation, audio, queueing, and scene restoration;
+  it does not fetch scores.
 - qBittorrent has no independent network path; it shares Gluetun's namespace.
   Never add a separate qBittorrent network or published port without revalidating
   the VPN fail-safe.
 - Jellyfin and Scrypted are operationally independent of the shared Jarvis
   application network.
-- Semavox is a trusted-LAN embedded device. Console only links to its browser
-  interface; speech requests and Home Assistant automation remain external.
+- Semavox is a trusted-LAN embedded presentation device with an unauthenticated
+  HTTP API. Console only links to its browser interface; Receipt and Wallboard
+  are the currently source-verified Jarvis alert senders. Semavox initiates only
+  NTP traffic and does not fetch household application data.
 
 ## Source directories and local documentation
 
@@ -123,6 +134,7 @@ not establish truth, and **unavailable** means no accepted check is configured.
 | Matter Server | `/volume1/docker/matterjs-server` | [Matter Server](../matterjs-server/README.md) |
 | Jellyfin | `/volume1/docker/jellyfin` | [Jellyfin](../jellyfin/README.md) |
 | Scrypted | `/volume1/docker/scrypted` | [Scrypted](../scrypted/README.md) |
+| Semavox | Mac iCloud Arduino checkout (not `/volume1/docker`) | Firmware `README.md`, `docs/API.md`, and `docs/INTEGRATIONS.md` in that checkout |
 
 ## Documentation maintenance rule
 

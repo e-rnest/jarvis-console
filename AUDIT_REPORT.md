@@ -1,6 +1,6 @@
 # Jarvis documentation audit report
 
-Audit date: 2026-11-05. Method: static reading of source and configuration. No service,
+Audit date: 2026-11-06. Method: static reading of source and configuration. No service,
 container, DNS record, proxy rule, printer or device was contacted. Nothing was committed or pushed.
 
 ## Scope
@@ -19,8 +19,8 @@ Assistant, Matter Server, Scrypted, Jellyfin) were checked by configuration and 
 | # | Finding | Evidence | Status |
 | --- | --- | --- | --- |
 | 1 | Wallboard `/health` returns `{"ok": true}`; Console requires `status == "ok"`, so the card should read `unknown` | `wallboard/server.py:1271`, `jarvis_console/clients/wallboard.py` | **Open:** application fix needs authorization |
-| 2 | `SERVICE_CATALOG.md` line 61 says Wallboard returns `status: ok` | Same as #1 | **Open:** file outside approved edit list |
-| 3 | `SERVICE_CATALOG.md` and `web/services.html` say Wallboard deployment is not established | `wallboard/compose.yaml` | **Open:** same restriction; `services.html` is an application asset |
+| 2 | `SERVICE_CATALOG.md` said Wallboard returns `status: ok` | Same as #1 | Fixed in documentation; application mismatch remains open |
+| 3 | `SERVICE_CATALOG.md` and `web/services.html` said Wallboard deployment was not established | `wallboard/compose.yaml` | Fixed |
 | 4 | `Jarvis Service URL and API Inventory.md` is dated 2026-10-01 and predates current Receipt routes and printers | `receipt_service/app/http.py` | **Open:** same restriction |
 | 5 | Semavox documents 429 as retry; neither sender retries | `semavox_alerts.py`, `integrations/sema_vox.py` | **Open:** may be intended best effort |
 | 6 | Receipt README omitted `GET /print`, to-do list and capabilities routes | `receipt_service/app/http.py` | Fixed |
@@ -40,8 +40,8 @@ Assistant, Matter Server, Scrypted, Jellyfin) were checked by configuration and 
 
 ## Remaining gaps
 
-- `/services` does not expose these documents. Doing so means editing `web/services.html`,
-  and `Dockerfile` copies only `jarvis_console` and `web`, so the Markdown is not in the image.
+- `/services` remains hand-maintained HTML. The Dockerfile copies only `jarvis_console`
+  and `web`, so Markdown under `docs/` is not served by the image.
 - Semavox has no `AGENTS.md` or `CLAUDE.md`; it needs separate authorization.
 - `$HOME/dev/wallboard` and `/volume1/docker/wallboard` have no documented reconciliation path.
 - `wallboard` has no test suite in its deployment directory.

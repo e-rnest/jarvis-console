@@ -10,7 +10,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from . import __version__
+from . import __build__, __version__
 from .actions import MorningBriefAction
 from .config import Config
 from .status import aggregate
@@ -80,6 +80,7 @@ class ConsoleHandler(BaseHTTPRequestHandler):
         elif url.path == "/health":
             self._json(HTTPStatus.OK, {
                 "status": "ok", "service": "jarvis-console", "version": __version__,
+                "build": __build__,
             })
         elif url.path == "/api/ipps/history":
             try:
@@ -107,7 +108,9 @@ class ConsoleHandler(BaseHTTPRequestHandler):
                 self._json(HTTPStatus.SERVICE_UNAVAILABLE,
                            {"error": "Message history unavailable"})
         elif url.path == "/api/status":
-            self._json(HTTPStatus.OK, aggregate(self.server.config))
+            payload = aggregate(self.server.config)
+            payload["console"] = {"version": __version__, "build": __build__}
+            self._json(HTTPStatus.OK, payload)
         else:
             self._json(HTTPStatus.NOT_FOUND, {"error": "Not found"})
 

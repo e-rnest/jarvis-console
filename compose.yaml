@@ -13,6 +13,8 @@ services:
       MORNING_BRIEF_URL: ${MORNING_BRIEF_URL:-http://receipt-service:8080/print/morning}
       MORNING_BRIEF_TIMEOUT_SECONDS: ${MORNING_BRIEF_TIMEOUT_SECONDS:-300}
       HOME_ASSISTANT_LAUNCH_URL: ${HOME_ASSISTANT_LAUNCH_URL:-http://ha.jarvis.home/}
+      HOME_ASSISTANT_STATUS_URL: ${HOME_ASSISTANT_STATUS_URL:-http://192.168.1.100:8123/api/}
+      HOME_ASSISTANT_TOKEN: ${HOME_ASSISTANT_TOKEN:-}
       HOME_ASSISTANT_SHORT_URL: ${HOME_ASSISTANT_SHORT_URL:-http://ha.home/}
       HOME_ASSISTANT_DIRECT_URL: ${HOME_ASSISTANT_DIRECT_URL:-http://192.168.1.100:8123/}
       RECEIPT_STATUS_URL: ${RECEIPT_STATUS_URL:-http://receipt-service:8080/health}
@@ -34,7 +36,9 @@ services:
       BLACKTORRENT_LAUNCH_URL: ${BLACKTORRENT_LAUNCH_URL:-http://blacktorrent.home/}
       BLACKTORRENT_BACKUP_URL: ${BLACKTORRENT_BACKUP_URL:-http://blacktorrent.jarvis.home/}
       JELLYFIN_LAUNCH_URL: ${JELLYFIN_LAUNCH_URL:-http://jellyfin.home}
+      JELLYFIN_STATUS_URL: ${JELLYFIN_STATUS_URL:-http://192.168.1.100:8096/System/Info/Public}
       JELLYFIN_TV_GUIDE_URL: ${JELLYFIN_TV_GUIDE_URL:-http://jellyfin.home/web/#/livetv?collectionType=livetv&tab=1}
+      SEMAVOX_STATUS_URL: ${SEMAVOX_STATUS_URL:-http://semavox.home/api/status}
       SEMAVOX_LAUNCH_URL: ${SEMAVOX_LAUNCH_URL:-http://semavox.home}
       SEMAVOX_FALLBACK_URL: ${SEMAVOX_FALLBACK_URL:-http://192.168.1.80}
       SEMAVOX_REPOSITORY_URL: ${SEMAVOX_REPOSITORY_URL:-https://github.com/e-rnest/semavox}
