@@ -15,3 +15,21 @@
 **Traps:** Do not turn a homepage into a health check to make a badge green. `web/services.html` is hand-maintained, so it drifts from the Markdown.
 
 **Without authorization, do not:** deploy, restart or rebuild containers, change `.env` or secrets, trigger printing or alerts, clear state, or commit and push. `/volume1/docker` on the NAS and `/Volumes/docker` on the Mac are the same production files.
+
+## Git Workflow Policy (Local-first)
+
+- The local working source is authoritative for current development.
+- Work directly on main by default.
+- Do not create a branch for routine tasks, documentation, small fixes, or maintenance.
+- Create a branch only for risky experiments, speculative features, or concurrent work requiring isolation.
+- If operating in an existing isolated worktree, do not switch or modify another worktree's branch.
+- Do not create branches merely because an AI agent starts a task.
+- Preserve uncommitted work and never overwrite another agent's changes.
+- Commit completed, intentional changes to main when authorized.
+- Push completed commits to GitHub when authorized.
+- Keep GitHub main aligned with the latest completed local source.
+- Do not merge old agent branches automatically.
+- Prefer fast-forward integration when possible.
+- Never force-push, reset, rewrite history, or delete branches without explicit authorization.
+- Do not run builds, tests, flashes, or deployments solely for Git housekeeping.
+- Before finishing, report any uncommitted, unpushed, or unmerged work.
