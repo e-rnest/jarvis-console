@@ -54,7 +54,7 @@
             <tr><td>Jarvis Console<br><code>jarvis-console</code></td><td><a href="http://console.jarvis.home/">console.jarvis.home</a>; <code>jarvis.home:8791</code>; <code>192.168.1.100:8791</code></td><td><code>192.168.1.100:8791</code> → <code>8080</code></td><td>project default + <code>jarvis-receipt-services</code>; hostname <code>jarvis-console</code></td><td>Own <code>/health</code></td></tr>
             <tr><td>Home Assistant<br><code>homeassistant</code></td><td><a href="http://ha.jarvis.home/">ha.jarvis.home</a>; <a href="http://ha.home/">ha.home</a>; <code>192.168.1.100:8123</code></td><td>host network; <code>8123</code></td><td>host network</td><td>Authenticated API status when configured + launch</td></tr>
             <tr><td>Matter Server<br><code>matterjs-server</code></td><td>Infrastructure only; <code>ws://127.0.0.1:5580/ws</code> from Home Assistant</td><td>host network; <code>5580</code></td><td>host network</td><td>Catalog only</td></tr>
-            <tr><td>Receipt<br><code>receipt-service</code></td><td><code>receipt.jarvis.home</code>; <code>jarvis.home:8788</code>; <code>192.168.1.100:8788</code>; printer dependency <code>receipt.home</code></td><td><code>192.168.1.100:8788</code> → <code>8080</code>; printer <code>9100</code></td><td>project default + <code>jarvis-receipt-services</code>; <code>receipt-service</code>, <code>morning-brief</code></td><td>JSON health, Morning Brief action, read-only Telegram history</td></tr>
+            <tr><td>Receipt<br><code>receipt-service</code></td><td><code>receipt.jarvis.home</code>; <code>jarvis.home:8788</code>; <code>192.168.1.100:8788</code>; printer dependencies Hedwig (<code>receipt.home</code>) and Pam (<code>192.168.1.230</code>)</td><td><code>192.168.1.100:8788</code> → <code>8080</code>; printer <code>9100</code></td><td>project default + <code>jarvis-receipt-services</code>; <code>receipt-service</code>, <code>morning-brief</code></td><td>JSON health, Morning Brief action, read-only Telegram history</td></tr>
             <tr><td>Label<br><code>label-service</code></td><td><a href="http://label.jarvis.home/print">label.jarvis.home</a>; <code>192.168.1.100:5050</code>; <code>jarvis.home:5050</code>; legacy <code>go.home:5050</code>; printer dependency <code>labeler.home</code></td><td><code>0.0.0.0:5050</code> → <code>5050</code>; printer <code>9100</code></td><td>project default; service alias <code>label-service</code></td><td>HTTP health + four navigation links</td></tr>
             <tr><td>Manifest<br><code>manifest-service / manifest</code></td><td><a href="http://manifest.home/">manifest.home</a>; <code>192.168.1.100:8000</code></td><td>active <code>192.168.1.100:8000</code> → <code>8000</code></td><td>project default; service alias <code>manifest</code></td><td>JSON health + launch</td></tr>
             <tr><td>Manifest Scanner<br><code>manifest-scanner</code></td><td>No listener; posts to Manifest's <code>/api/v1/scans</code></td><td>No listener</td><td>project default; outbound HTTP only</td><td>Catalog only</td></tr>
@@ -128,7 +128,7 @@
         <li>Joins its default network and the external <code>jarvis-receipt-services</code> network, where it has <code>receipt-service</code> and legacy <code>morning-brief</code> aliases.</li>
         <li>Uses the external <code>morning-brief_schedule-data</code> volume for durable scheduler and Telegram history state. Console mounts that volume read-only.</li>
         <li>The Console <strong>Thermal Telegram</strong> card reads the newest 50 stored entries through Console's read-only API. It cannot mutate, acknowledge, delete, decrypt, or retry messages.</li>
-        <li>Prints raw ESC/POS over TCP to the receipt printer on port 9100. The configured printer is not probed by health.</li>
+        <li>Prints raw ESC/POS over TCP to Hedwig or Pam on port 9100 (the scheduled Morning Brief is routed to Hedwig, every other job to Pam). Neither printer is probed by health.</li>
         <li>Morning Brief gathers its own weather, market, headline, daily-content, and trivia inputs; upstream failures are handled within Receipt rather than by Console.</li>
       </ul>
       <h3>Current HTTP surface</h3>
@@ -352,7 +352,7 @@
             <tr><td><code>blacktorrent.home</code>, <code>blacktorrent.jarvis.home</code>, <code>qbit.jarvis.home</code></td><td><code>192.168.1.100:8080</code></td><td>qBittorrent WebUI through Gluetun</td></tr>
             <tr><td><code>jarvis.home</code></td><td>None</td><td>NAS host name; services are reached by explicit port</td></tr>
             <tr><td><code>go.home</code></td><td>None</td><td>Legacy Label alias; DNS record only, so it needs <code>:5050</code></td></tr>
-            <tr><td><code>receipt.home</code>, <code>labeler.home</code></td><td>None</td><td>Printers (raw TCP <code>9100</code>), not services</td></tr>
+            <tr><td><code>receipt.home</code> (Hedwig), <code>192.168.1.230</code> (Pam), <code>labeler.home</code></td><td>None</td><td>Printers (raw TCP <code>9100</code>), not services</td></tr>
             <tr><td><code>semavox.home</code></td><td>None</td><td>Semavox device, HTTP port <code>80</code></td></tr>
           </tbody>
         </table>

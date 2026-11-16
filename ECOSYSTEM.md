@@ -32,8 +32,8 @@ flowchart LR
   end
   subgraph Hardware
     SEMA[Semavox ESP32-S3]
-    EPSON[Epson TM-m30]
-    EOM[EOM-200]
+    PAM[Pam: Epson TM-m30]
+    HEDWIG[Hedwig: EOM-200]
     QL[Brother QL-710W]
     ZEBRA[Zebra DS4308]
   end
@@ -44,8 +44,8 @@ flowchart LR
   NTFY -->|encrypted IPPS envelope| RECEIPT
   WALL -->|NFL alert| SEMA
   RECEIPT -->|Telegram alert| SEMA
-  RECEIPT --> EPSON
-  RECEIPT -->|scheduled brief| EOM
+  RECEIPT --> PAM
+  RECEIPT -->|scheduled brief| HEDWIG
   RECEIPT -->|inventory| LABEL
   RECEIPT -->|clues| JEOP
   RECEIPT -->|questions| TRIVIA
