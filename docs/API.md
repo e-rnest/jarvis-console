@@ -13,7 +13,7 @@ not implemented by the handler.
 Process health only; it does not query downstreams.
 
 ```json
-{"status":"ok","service":"jarvis-console","version":"1.1.0","build":"2026.11.06.1"}
+{"status":"ok","service":"jarvis-console","version":"1.1.0","build":"2026.11.16.1"}
 ```
 
 ## `GET /api/status`
@@ -25,7 +25,7 @@ returns HTTP 200 even when individual services are failed, unknown, or unavailab
 ```json
 {
   "generated_at": "2026-11-06T20:00:00+00:00",
-  "console": {"version":"1.1.0","build":"2026.11.06.1"},
+  "console": {"version":"1.1.0","build":"2026.11.16.1"},
   "services": [{
     "key": "label",
     "name": "Label",

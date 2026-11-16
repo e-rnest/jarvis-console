@@ -18,8 +18,8 @@ Assistant, Matter Server, Scrypted, Jellyfin) were checked by configuration and 
 
 | # | Finding | Evidence | Status |
 | --- | --- | --- | --- |
-| 1 | Wallboard `/health` returns `{"ok": true}`; Console requires `status == "ok"`, so the card should read `unknown` | `wallboard/server.py:1271`, `jarvis_console/clients/wallboard.py` | **Open:** application fix needs authorization |
-| 2 | `SERVICE_CATALOG.md` said Wallboard returns `status: ok` | Same as #1 | Fixed in documentation; application mismatch remains open |
+| 1 | Wallboard `/health` returns `{"ok": true}`; Console requires `status == "ok"`, so the card should read `unknown` | `wallboard/server.py:1271`, `jarvis_console/clients/wallboard.py` | **Resolved:** Wallboard now also returns `status: ok` (observed 2026-11-16); the card reads `healthy` |
+| 2 | `SERVICE_CATALOG.md` said Wallboard returns `status: ok` | Same as #1 | Superseded: the application now returns `status: ok` (see #1) |
 | 3 | `SERVICE_CATALOG.md` and `web/services.html` said Wallboard deployment was not established | `wallboard/compose.yaml` | Fixed |
 | 4 | `Jarvis Service URL and API Inventory.md` is dated 2026-10-01 and predates current Receipt routes and printers | `receipt_service/app/http.py` | **Open:** same restriction |
 | 5 | Semavox documents 429 as retry; neither sender retries | `semavox_alerts.py`, `integrations/sema_vox.py` | **Open:** may be intended best effort |

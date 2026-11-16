@@ -29,7 +29,7 @@ or device was live at audit time.
 - Proxies exactly one Morning Brief request at a time, with no automatic retry and
   explicit `success`, `failed`, `busy`, and `uncertain` outcomes.
 - Serves the hand-maintained `/services` ecosystem catalog alongside the dashboard.
-- Displays backend version `1.1.0` and build `2026.11.06.1` in the dashboard footer.
+- Displays backend version `1.1.0` and build `2026.11.16.1` in the dashboard footer.
 - Uses only Python 3.12's standard library plus static HTML, CSS, and JavaScript.
 
 ## Access
@@ -100,10 +100,9 @@ paper output, scanner operation, display state, or device firmware state.
 
 ## Important known gap
 
-Source inspection shows Wallboard currently returns `{"ok": true}` from `/health`,
-while Console accepts only `{"status": "ok"}`. The Wallboard card should therefore be
-`unknown` until one side's application contract changes. This documentation records
-the mismatch; it does not weaken the adapter to make the badge green.
+The earlier Wallboard health mismatch is resolved: on 2026-11-16 Wallboard's `/health`
+returned `{"ok": true, "service": "wallboard", "status": "ok"}`, which satisfies Console's
+`status: ok` contract without weakening the adapter. No contract gap is currently open.
 
 There are no documented planned Console features in this repository. Ideas such as a
 notification hub, container controls, or inferred physical-device health are not implemented.

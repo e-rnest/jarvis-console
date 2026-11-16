@@ -20,7 +20,7 @@ browser. Other variables on this page are non-secret routing/configuration value
 | Service | Status variable and default | Browser link variables and defaults |
 | --- | --- | --- |
 | Receipt | `RECEIPT_STATUS_URL=http://receipt-service:8080/health` | `RECEIPT_REPOSITORY_URL=https://github.com/e-rnest/receipt-service` |
-| Label | `LABEL_STATUS_URL=http://jarvis.home:5050/health` | `LABEL_LAUNCH_URL=http://label.jarvis.home/print`; `LABEL_QUICK_LABELS_URL=http://label.jarvis.home/labels`; `LABEL_FRIDGE_URL=http://label.jarvis.home/inventory`; `LABEL_FREEZER_URL=http://label.jarvis.home/inventory/frozen` |
+| Label | `LABEL_STATUS_URL=http://192.168.1.100:5050/health` | `LABEL_LAUNCH_URL=http://label.jarvis.home/print`; `LABEL_QUICK_LABELS_URL=http://label.jarvis.home/labels`; `LABEL_FRIDGE_URL=http://label.jarvis.home/inventory`; `LABEL_FREEZER_URL=http://label.jarvis.home/inventory/frozen` |
 | Manifest | `MANIFEST_STATUS_URL=http://manifest.home/health` | `MANIFEST_LAUNCH_URL=http://manifest.home/` |
 | Jeopardy | `JEOPARDY_STATUS_URL=http://jeopardy-service:8080/health` | `JEOPARDY_LAUNCH_URL=http://jeopardy.home/` |
 | TriviaROM | `TRIVIAROM_STATUS_URL=http://triviarom-service:8080/health` | `TRIVIAROM_LAUNCH_URL=http://trivia.jarvis.home/` |

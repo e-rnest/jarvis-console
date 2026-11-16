@@ -3,6 +3,9 @@
 from jarvis_console.config import ServiceConfig
 from .common import StatusRequestError, fetch_json, result
 
+# Jellyfin servers report "Jellyfin Server"; the bare name is kept for compatibility.
+ACCEPTED_PRODUCT_NAMES = frozenset({"Jellyfin Server", "Jellyfin"})
+
 
 def check(config: ServiceConfig, timeout: float) -> dict:
     try:
@@ -12,7 +15,7 @@ def check(config: ServiceConfig, timeout: float) -> dict:
         product_name = payload.get("ProductName")
         server_id = payload.get("Id")
         setup_complete = payload.get("StartupWizardCompleted")
-        if (http_status != 200 or product_name != "Jellyfin"
+        if (http_status != 200 or product_name not in ACCEPTED_PRODUCT_NAMES
                 or not isinstance(server_name, str) or not server_name
                 or not isinstance(version, str) or not version
                 or not isinstance(server_id, str) or not server_id

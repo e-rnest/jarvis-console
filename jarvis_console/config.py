@@ -99,7 +99,7 @@ def load_config() -> Config:
         ),
         ServiceConfig(
             "label", "Label",
-            _status_url("LABEL_STATUS_URL", "http://jarvis.home:5050/health"),
+            _status_url("LABEL_STATUS_URL", "http://192.168.1.100:5050/health"),
             _url("LABEL_LAUNCH_URL", "http://label.jarvis.home/print"),
             (
                 ("Quick Labels", _url(

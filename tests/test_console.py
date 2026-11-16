@@ -40,7 +40,7 @@ TRIVIA_OK = {
 JELLYFIN_OK = {
     "ServerName": "jellyfin",
     "Version": "10.11.0",
-    "ProductName": "Jellyfin",
+    "ProductName": "Jellyfin Server",
     "Id": "0123456789abcdef",
     "StartupWizardCompleted": True,
 }
@@ -218,6 +218,20 @@ class AggregationTests(unittest.TestCase):
         self.assertEqual(statuses["jellyfin"]["details"], {
             "server_name": "jellyfin", "version": "10.11.0",
         })
+
+    def test_jellyfin_product_name_contract(self):
+        for product_name, expected in (
+            ("Jellyfin Server", "healthy"), ("Jellyfin", "healthy"),
+            ("Emby Server", "unknown"), (None, "unknown"),
+        ):
+            with self.subTest(product_name=product_name):
+                responses = healthy_responses()
+                responses["/jellyfin"] = (
+                    200, JELLYFIN_OK | {"ProductName": product_name}, 0,
+                )
+                with fake_downstreams(responses) as (base, _):
+                    jellyfin = by_key(aggregate(configuration(base)))["jellyfin"]
+                self.assertEqual(jellyfin["status"], expected)
 
     def test_jellyfin_incomplete_setup_is_failed(self):
         responses = healthy_responses()
@@ -436,7 +450,7 @@ class ConsoleHTTPTests(unittest.TestCase):
         self.assertEqual(payload["status"], "ok")
         self.assertEqual(payload["service"], "jarvis-console")
         self.assertEqual(payload["version"], "1.1.0")
-        self.assertEqual(payload["build"], "2026.11.06.1")
+        self.assertEqual(payload["build"], "2026.11.16.1")
 
     def test_status_api_does_not_leak_internal_targets(self):
         with fake_downstreams(healthy_responses()) as (base, _):
@@ -451,7 +465,7 @@ class ConsoleHTTPTests(unittest.TestCase):
         self.assertIn("http://launch/trivia", body)
         payload = json.loads(body)
         self.assertEqual(payload["console"], {
-            "version": "1.1.0", "build": "2026.11.06.1",
+            "version": "1.1.0", "build": "2026.11.16.1",
         })
 
     def test_static_page_has_required_structure_and_no_internal_hostnames(self):

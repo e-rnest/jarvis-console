@@ -22,14 +22,14 @@ so those paths can have different DNS and network reachability.
 | Target | Default endpoint | Accepted contract and change impact |
 | --- | --- | --- |
 | Receipt | `http://receipt-service:8080/health` | Identity `morning-brief`; strict scheduler/printing schema; HTTP 200 `ok` or HTTP 503 `degraded`. Schema/identity/alias changes produce `unknown`; supported degradation becomes `failed`. |
-| Label | `http://jarvis.home:5050/health` | HTTP 200 JSON `status: ok`. Does not prove printer health. |
+| Label | `http://192.168.1.100:5050/health` | HTTP 200 JSON `status: ok`. Does not prove printer health. |
 | Manifest | `http://manifest.home/health` | HTTP 200 JSON `status: ok`. Does not cover scanner or queue health. |
 | Jeopardy | `http://jeopardy-service:8080/health` | HTTP 200 `status: ok`; HTTP 503 `error: corpus unavailable` is known `failed`. Other shape changes produce `unknown`. |
 | TriviaROM | `http://triviarom-service:8080/health` | Identity `TriviaROM`, loaded corpus, non-negative integer counts, playable ≤ total. |
-| Wallboard | `http://wallboard.home/health` | Console expects HTTP 200 `status: ok`. **Open mismatch:** Wallboard source returns `{"ok": true}`, so the card should be `unknown`. Coordinate an application contract change; do not weaken checks just for a green badge. |
+| Wallboard | `http://wallboard.home/health` | HTTP 200 JSON `status: ok` (observed 2026-11-16: `{"ok": true, "service": "wallboard", "status": "ok"}`). Does not prove kiosk browser, display, or screen state. |
 | BlackTorrent/qBittorrent | `http://192.168.1.100:8080/` | Any HTTP 2xx. Proves WebUI reachability only—not Gluetun, `tun0`, VPN egress, leak safety, or job state. |
 | Home Assistant | `http://192.168.1.100:8123/api/` when `HOME_ASSISTANT_TOKEN` is configured | Bearer-authenticated HTTP 200 exact `{"message":"API running."}`. Token remains server-side. Does not inspect integrations, entities, automations, or devices. |
-| Jellyfin | `http://192.168.1.100:8096/System/Info/Public` | Public HTTP 200 Jellyfin identity, version, ID, and completed startup wizard. Does not prove libraries, playback, transcoding, plugins, or Live TV. |
+| Jellyfin | `http://192.168.1.100:8096/System/Info/Public` | Public HTTP 200 with `ProductName` `Jellyfin Server` (or `Jellyfin`), server name, version, ID, and completed startup wizard. Does not prove libraries, playback, transcoding, plugins, or Live TV. |
 | Semavox | `http://semavox.home/api/status` | HTTP 200 plus the documented online/uptime/audio/volume/startup-chime/label schema. Proves the device API answered, not physical hardware behavior or flashed feature parity. |
 
 Receipt, Jeopardy, and TriviaROM share external Docker network

@@ -29,14 +29,14 @@ change first and notify the other.
 | Target | Route | Accepted contract | File |
 | --- | --- | --- | --- |
 | Receipt | `receipt-service:8080/health` | Receipt adapter | `clients/receipt.py` |
-| Label | `jarvis.home:5050/health` | `status: ok` | `clients/label.py` |
+| Label | `192.168.1.100:5050/health` | `status: ok` | `clients/label.py` |
 | Manifest | `manifest.home/health` | `status: ok` | `clients/manifest.py` |
 | Jeopardy | `jeopardy-service:8080/health` | Corpus-aware | `clients/jeopardy.py` |
 | TriviaROM | `triviarom-service:8080/health` | Corpus counts | `clients/triviarom.py` |
-| Wallboard | `wallboard.home/health` | `status: ok`. **Wallboard returns `{"ok": true}`, so see the mismatch below.** | `clients/wallboard.py` |
+| Wallboard | `wallboard.home/health` | `status: ok`; observed 2026-11-16: `{"ok": true, "service": "wallboard", "status": "ok"}` | `clients/wallboard.py` |
 | BlackTorrent | `192.168.1.100:8080/` | Any 2xx; proves only WebUI reachability | `clients/blacktorrent.py` |
 | Home Assistant | `192.168.1.100:8123/api/` | Authenticated HTTP 200 with exact `{"message":"API running."}`; omitted when no token is configured | `clients/homeassistant.py` |
-| Jellyfin | `192.168.1.100:8096/System/Info/Public` | HTTP 200 Jellyfin identity/version with completed startup wizard | `clients/jellyfin.py` |
+| Jellyfin | `192.168.1.100:8096/System/Info/Public` | HTTP 200 with `ProductName` `Jellyfin Server` (or `Jellyfin`), name/version/ID, and completed startup wizard | `clients/jellyfin.py` |
 | Semavox | `semavox.home/api/status` | HTTP 200 with the documented online message, uptime, audio, volume, startup-chime, and label schema | `clients/semavox.py` |
 | Receipt print | `POST receipt-service:8080/print/morning` | One guarded request, never retried | `actions.py` |
 | Telegram history | `/receipt-data/telegram_history.sqlite3`, read-only | Receipt's schema | `http.py` |
@@ -47,9 +47,9 @@ Assistant integrations, Jellyfin playback/transcoding/Live TV, or Semavox hardwa
 
 ## Known contract problems
 
-1. **Wallboard health mismatch.** `wallboard/server.py:1271` returns `{"ok": true}`, while
-   `clients/wallboard.py` requires `status == "ok"`. From source, the Console card should read
-   `unknown`. The Console test stub uses `{"status": "ok"}`, so tests do not catch this. Not fixed: it is application behavior.
+1. **Wallboard health mismatch — resolved.** Wallboard's `/health` now includes
+   `status: ok` (observed 2026-11-16: `{"ok": true, "service": "wallboard", "status": "ok"}`), which
+   satisfies `clients/wallboard.py`. The Console card reads `healthy`.
 2. **Semavox 429 handling.** Semavox documents 429 as "retry with the same ID". Neither sender retries, so an alert during a full queue is lost. This may be intended best-effort behavior.
 3. **Wallboard dedupe after restart.** The notifier's seen-ID set is in memory, but the event tracker's per-game state is persisted, and `nfl_service.py` saves it before calling `submit`. A restart therefore should not resubmit a saved event. If that save fails, an event could be derived again, and Semavox's own 15-minute dedupe limits the effect. Traced from source only.
 
