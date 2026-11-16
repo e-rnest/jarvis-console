@@ -35,7 +35,7 @@ service/network alias or the fixed Jarvis LAN address instead.
 | Jarvis Console | `jarvis-console` | `console.jarvis.home`; direct `jarvis.home:8791`; `192.168.1.100:8791` | `192.168.1.100:8791` → `8080` | project default + `jarvis-receipt-services`; hostname `jarvis-console` | Own process health and service dashboard |
 | Home Assistant | `homeassistant` | `ha.jarvis.home`; `ha.home`; direct `192.168.1.100:8123` | host network, application `8123` | host network | Authenticated API status when a dedicated token is configured; otherwise launch-only |
 | Matter Server | `matterjs-server` | Infrastructure only; Home Assistant uses `ws://127.0.0.1:5580/ws` | host network, service `5580` | host network | Catalog only; no general UI or accepted health contract |
-| Receipt Service | `receipt-service` | `receipt.jarvis.home`; API at `jarvis.home:8788` / `192.168.1.100:8788`; printers Hedwig (`receipt.home` / `192.168.1.102`) and Pam (`192.168.1.230`) are dependencies, not the service | `192.168.1.100:8788` → `8080`; printer `9100` | project default + `jarvis-receipt-services`; aliases `receipt-service`, `morning-brief` | Health, scheduler detail, Morning Brief action, read-only Telegram history, repository link |
+| Receipt Service | `receipt-service` | `receipt.jarvis.home`; API at `jarvis.home:8788` / `192.168.1.100:8788`; printers Hedwig (`hedwig.home` / `192.168.1.102`) and Pam (`pam.home` / `192.168.1.230`) are dependencies, not the service | `192.168.1.100:8788` → `8080`; printer `9100` | project default + `jarvis-receipt-services`; aliases `receipt-service`, `morning-brief` | Health, scheduler detail, Morning Brief action, read-only Telegram history, repository link |
 | Label Service | `label-service` | `label.jarvis.home`; direct `192.168.1.100:5050` (Console status route) / `jarvis.home:5050`; legacy `go.home:5050` (DNS only, no proxy rule); printer DNS `labeler.home` is a dependency | `0.0.0.0:5050` → `5050`; printer `9100` | project default; service name `label-service` | Health, Print, Quick Labels, Fridge, and Freezer links |
 | Manifest | Compose service `manifest` in project `manifest-service` | `manifest.home`; direct `192.168.1.100:8000` | active `.env`: `192.168.1.100:8000` → `8000`; safe Compose default is loopback | project default; service name `manifest` | Health and launch card |
 | Manifest Scanner | `manifest-scanner` (Compose service `scanner`) | No listener; delivers to `192.168.1.100:8000/api/v1/scans` by default | no listener | project default bridge; outbound HTTP only | Catalog only; no accepted health endpoint |
@@ -70,7 +70,7 @@ repositories do not manage it and record targets were not part of the snapshot.
 | `blacktorrent.home`, `blacktorrent.jarvis.home`, `qbit.jarvis.home` | `192.168.1.100:8080` | qBittorrent WebUI through Gluetun |
 | `jarvis.home` | none | NAS host name; services are reached by explicit port |
 | `go.home` | none | Legacy Label alias; DNS record only, so it needs `:5050` |
-| `receipt.home` (Hedwig), `192.168.1.230` (Pam), `labeler.home` | none | Printers (raw TCP `9100`), not services |
+| `hedwig.home` (Hedwig; legacy alias `receipt.home`), `pam.home` (Pam), `labeler.home` | none | Printers (raw TCP `9100`), not services |
 | `semavox.home` | none | Semavox device, HTTP port `80` |
 
 No DNS record or proxy rule exists for Scrypted, Matter Server, or the scanners.
