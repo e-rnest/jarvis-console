@@ -24,6 +24,29 @@ function addDetail(list, label, value, error = false) {
   list.append(wrapper);
 }
 
+function renderPrinters(printers) {
+  const row = element("div", "printer-chips");
+  if (!Array.isArray(printers)) {
+    row.append(element("p", "printer-chip unknown", "Printer status unavailable"));
+    return row;
+  }
+  for (const printer of printers) {
+    const chip = element("div", `printer-chip ${printer.state}`);
+    chip.append(element("strong", "printer-chip-title", `${printer.name} \u00b7 ${printer.text}`));
+    if (printer.note) chip.append(element("span", "printer-chip-note", printer.note));
+    const checked = printer.checked_at
+      ? `Checked ${new Date(printer.checked_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+      : "Not checked yet";
+    chip.append(element("span", "printer-chip-note", checked));
+    if (printer.busy) {
+      chip.append(element("span", "printer-chip-note busy",
+        "Busy: check skipped, showing last result"));
+    }
+    row.append(chip);
+  }
+  return row;
+}
+
 function renderCard(service) {
   const card = element("article", `card ${service.key}`);
   const top = element("div", "card-top");
@@ -41,6 +64,10 @@ function renderCard(service) {
     actions.append(viewLog);
     card.append(actions);
     return card;
+  }
+
+  if (service.key === "receipt" && service.printers !== undefined) {
+    card.append(renderPrinters(service.printers));
   }
 
   if (service.key === "receipt" && service.details) {

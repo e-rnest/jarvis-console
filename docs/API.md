@@ -44,6 +44,30 @@ version; Semavox details expose uptime, audio readiness, volume, startup-chime s
 and label. Status values are `healthy`, `failed`,
 `unknown`, and `unavailable`. Internal check URLs are never returned.
 
+The Receipt entry also carries `printers`, read from Receipt's
+`GET /printers/status` with one request per snapshot. Console never contacts a
+printer itself. It is `null` when that request fails or its schema does not
+match, and it never changes Receipt's `status`.
+
+```json
+"printers": [
+  {"name": "Pam", "kind": "status", "state": "ok", "text": "Ready",
+   "note": null, "busy": false, "checked_at": "2026-11-16T16:20:05-08:00"},
+  {"name": "Hedwig", "kind": "reachability", "state": "ok", "text": "Reachable",
+   "note": "Reachability only. No paper status.", "busy": false,
+   "checked_at": "2026-11-16T16:20:05-08:00"}
+]
+```
+
+`state` is `ok`, `warn`, `bad` or `unknown`. Pam's `text` is one of `Ready`,
+`Paper near end`, `Paper out`, `Cover open`, `Cutter error`, `Unrecoverable
+error`, `Auto-recoverable error`, `Offline`, `Unreachable`, `No status reply`,
+`Status unknown` or `Not checked yet`. Hedwig's is `Reachable`, `Unreachable`
+or `Not checked yet`. `busy: true` means Receipt skipped the check because a
+print job was running, and the values are from `checked_at`. `checked_at` is
+`null` until the first check. Receipt caches the real check for 60 seconds, so
+refreshing Console does not make it contact the printers more often.
+
 ## `GET /api/ipps/history`
 
 Returns at most 50 newest Receipt Telegram-history records:

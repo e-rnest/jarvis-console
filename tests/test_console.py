@@ -11,6 +11,9 @@ import unittest
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
+from dataclasses import replace
+
+from jarvis_console.clients import receipt as receipt_client
 from jarvis_console.config import Config, ServiceConfig
 from jarvis_console.http import make_server
 from jarvis_console.status import aggregate
@@ -56,6 +59,19 @@ RECEIPT_PRINT_OK = {
     "bytes": 1234,
     "notices": [],
     "delivery": "TCP accepted; physical output is not confirmed",
+}
+PAM_OK = {
+    "name": "Pam", "kind": "status", "reachable": True, "online": True,
+    "paper": "ok", "cover_open": False, "error": None, "busy": False,
+    "detail": "Pam status: ok", "checked_at": "2026-11-16T16:20:05-08:00",
+}
+HEDWIG_OK = {
+    "name": "Hedwig", "kind": "reachability", "reachable": True, "busy": False,
+    "detail": "Hedwig reachable", "checked_at": "2026-11-16T16:20:05-08:00",
+}
+PRINTERS_OK = {
+    "service": "morning-brief", "cache_seconds": 60,
+    "printers": [PAM_OK, HEDWIG_OK],
 }
 DROP_CONNECTION = object()
 
@@ -426,6 +442,149 @@ class AggregationTests(unittest.TestCase):
         self.assertEqual(statuses["homeassistant"]["secondary_links"], [{
             "label": "Direct", "url": "http://launch/homeassistant/direct",
         }])
+
+
+def printer_configuration(base_url: str, timeout: float = 0.25) -> Config:
+    return replace(configuration(base_url, timeout),
+                   receipt_printers_url=f"{base_url}/printers")
+
+
+class PrinterViewTests(unittest.TestCase):
+    def view(self, **changes):
+        return receipt_client.printer_view({**PAM_OK, **changes})
+
+    def chip(self, **changes):
+        view = self.view(**changes)
+        return view["state"], view["text"]
+
+    def test_pam_ready(self):
+        self.assertEqual(self.view(), {
+            "name": "Pam", "kind": "status", "state": "ok", "text": "Ready",
+            "note": None, "busy": False,
+            "checked_at": "2026-11-16T16:20:05-08:00",
+        })
+
+    def test_pam_problem_states(self):
+        self.assertEqual(self.chip(paper="near_end"), ("warn", "Paper near end"))
+        self.assertEqual(self.chip(paper="out", online=False), ("bad", "Paper out"))
+        self.assertEqual(self.chip(cover_open=True, online=False), ("bad", "Cover open"))
+        self.assertEqual(self.chip(error="cutter", online=False), ("bad", "Cutter error"))
+        self.assertEqual(self.chip(error="unrecoverable", online=False),
+                         ("bad", "Unrecoverable error"))
+        self.assertEqual(self.chip(online=False), ("bad", "Offline"))
+        self.assertEqual(
+            self.chip(reachable=False, online=None, cover_open=None, paper="unknown"),
+            ("bad", "Unreachable"))
+        self.assertEqual(
+            self.chip(error="no_response", online=None, cover_open=None, paper="unknown"),
+            ("unknown", "No status reply"))
+
+    def test_never_checked_and_busy(self):
+        view = self.view(reachable=None, online=None, cover_open=None,
+                         paper="unknown", checked_at=None, busy=True)
+        self.assertEqual((view["state"], view["text"], view["busy"], view["checked_at"]),
+                         ("unknown", "Not checked yet", True, None))
+        busy = self.view(paper="near_end", busy=True)
+        self.assertEqual((busy["text"], busy["busy"]), ("Paper near end", True))
+
+    def test_hedwig_is_reachability_only(self):
+        view = receipt_client.printer_view(HEDWIG_OK)
+        self.assertEqual(view, {
+            "name": "Hedwig", "kind": "reachability", "state": "ok",
+            "text": "Reachable", "note": "Reachability only. No paper status.",
+            "busy": False, "checked_at": "2026-11-16T16:20:05-08:00",
+        })
+        down = receipt_client.printer_view({**HEDWIG_OK, "reachable": False})
+        self.assertEqual((down["state"], down["text"]), ("bad", "Unreachable"))
+        self.assertNotIn("paper", view)
+
+    def test_schema_mismatches_are_rejected(self):
+        bad = [
+            "Pam", {**PAM_OK, "name": "Printer"}, {**PAM_OK, "kind": "other"},
+            {**PAM_OK, "paper": "low"}, {**PAM_OK, "error": "jam"},
+            {**PAM_OK, "busy": "no"}, {**PAM_OK, "reachable": "yes"},
+            {**PAM_OK, "checked_at": "yesterday"}, {**PAM_OK, "checked_at": None},
+            {k: v for k, v in PAM_OK.items() if k != "paper"},
+        ]
+        for entry in bad:
+            with self.assertRaises(receipt_client.StatusRequestError):
+                receipt_client.printer_view(entry)
+
+
+class PrinterAggregationTests(unittest.TestCase):
+    def receipt(self, printers_response, timeout=0.25):
+        responses = healthy_responses()
+        if printers_response is not None:
+            responses["/printers"] = printers_response
+        with fake_downstreams(responses) as (base, downstream):
+            snapshot = aggregate(printer_configuration(base, timeout))
+            paths = [path for path, _ in downstream.get_headers]
+        return by_key(snapshot), paths
+
+    def test_printers_are_attached_to_receipt_with_one_request(self):
+        statuses, paths = self.receipt((200, PRINTERS_OK, 0))
+        receipt = statuses["receipt"]
+        self.assertEqual(receipt["status"], "healthy")
+        self.assertEqual([(p["name"], p["state"], p["text"]) for p in receipt["printers"]],
+                         [("Pam", "ok", "Ready"), ("Hedwig", "ok", "Reachable")])
+        self.assertEqual(paths.count("/printers"), 1)
+        self.assertEqual(paths.count("/receipt"), 1)
+        for key, service in statuses.items():
+            if key != "receipt":
+                self.assertNotIn("printers", service)
+
+    def test_printer_problems_do_not_change_receipt_health(self):
+        payload = {**PRINTERS_OK, "printers": [
+            {**PAM_OK, "reachable": False, "online": None, "cover_open": None,
+             "paper": "unknown"},
+            {**HEDWIG_OK, "reachable": False},
+        ]}
+        statuses, _ = self.receipt((200, payload, 0))
+        self.assertEqual(statuses["receipt"]["status"], "healthy")
+        self.assertEqual([p["state"] for p in statuses["receipt"]["printers"]],
+                         ["bad", "bad"])
+        self.assertTrue(all(service["status"] == "healthy"
+                            for service in statuses.values()))
+
+    def test_failed_printer_fetch_is_null_and_isolated(self):
+        cases = [
+            None,                                              # 404
+            (500, {"error": "boom"}, 0),
+            (200, b"not json", 0),
+            (200, {**PRINTERS_OK, "service": "other"}, 0),
+            (200, {**PRINTERS_OK, "printers": [PAM_OK]}, 0),
+            (200, {**PRINTERS_OK, "printers": [PAM_OK, PAM_OK]}, 0),
+            (200, {**PRINTERS_OK, "printers": [{**PAM_OK, "paper": "?"}, HEDWIG_OK]}, 0),
+            (200, PRINTERS_OK, 0.4),                           # timeout
+        ]
+        for response in cases:
+            statuses, _ = self.receipt(response, timeout=0.2)
+            self.assertIsNone(statuses["receipt"]["printers"])
+            self.assertEqual(statuses["receipt"]["status"], "healthy")
+            self.assertEqual(statuses["label"]["status"], "healthy")
+
+    def test_no_printer_request_without_a_configured_url(self):
+        with fake_downstreams(healthy_responses()) as (base, downstream):
+            statuses = by_key(aggregate(configuration(base)))
+            paths = [path for path, _ in downstream.get_headers]
+        self.assertNotIn("printers", statuses["receipt"])
+        self.assertNotIn("/printers", paths)
+
+    def test_printer_chips_are_rendered_by_the_page(self):
+        script = (ROOT / "web/app.js").read_text()
+        styles = (ROOT / "web/app.css").read_text()
+        self.assertIn("function renderPrinters(printers)", script)
+        self.assertIn("card.append(renderPrinters(service.printers))", script)
+        self.assertIn("printer.note", script)
+        self.assertIn("Checked ${", script)
+        self.assertIn("Not checked yet", script)
+        self.assertIn("Busy: check skipped, showing last result", script)
+        self.assertIn("Printer status unavailable", script)
+        for state in ("ok", "warn", "bad", "unknown"):
+            self.assertIn(f".printer-chip.{state}", styles)
+        # The browser only reads Console; it never names a printer host or port.
+        for forbidden in ("9100", "pam.home", "hedwig.home", "/printers/status"):
+            self.assertNotIn(forbidden, script)
 
 
 class ConsoleHTTPTests(unittest.TestCase):

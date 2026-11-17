@@ -45,7 +45,14 @@ def _with_secondary_links(config: ServiceConfig, service: dict) -> dict:
 def aggregate(config: Config) -> dict:
     services: dict[str, dict] = {}
     checked = [service for service in config.services if service.status_url is not None]
-    with ThreadPoolExecutor(max_workers=len(checked), thread_name_prefix="status") as executor:
+    receipt_checked = any(service.key == "receipt" for service in checked)
+    printers_url = config.receipt_printers_url if receipt_checked else None
+    with ThreadPoolExecutor(max_workers=len(checked) + 1,
+                            thread_name_prefix="status") as executor:
+        # One request per snapshot; Receipt caches the real printer check.
+        printers = (executor.submit(receipt.printers, printers_url,
+                                    config.timeout_seconds)
+                    if printers_url else None)
         futures = {
             executor.submit(ADAPTERS[service.key], service, config.timeout_seconds): service
             for service in checked
@@ -56,6 +63,13 @@ def aggregate(config: Config) -> dict:
                 services[service.key] = _with_secondary_links(service, future.result())
             except Exception:
                 services[service.key] = _unexpected(service)
+
+        if printers is not None:
+            # Printer status is extra detail. It never changes Receipt's badge.
+            try:
+                services["receipt"]["printers"] = printers.result()
+            except Exception:
+                services["receipt"]["printers"] = None
 
     for service in config.services:
         if service.status_url is None:

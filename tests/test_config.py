@@ -30,6 +30,8 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(services["wallboard"].launch_url,
                          "http://wallboard.home/")
         self.assertEqual(services["receipt"].name, "Receipt Service")
+        self.assertEqual(config.receipt_printers_url,
+                         "http://receipt-service:8080/printers/status")
         self.assertIsNone(services["receipt"].launch_url)
         self.assertEqual(services["receipt"].secondary_links, ((
             "GitHub", "https://github.com/e-rnest/receipt-service",
@@ -100,6 +102,8 @@ class ConfigTests(unittest.TestCase):
                       compose)
         self.assertIn("RECEIPT_REPOSITORY_URL: ${RECEIPT_REPOSITORY_URL:-https://github.com/e-rnest/receipt-service}",
                       compose)
+        self.assertIn("RECEIPT_PRINTERS_STATUS_URL: ${RECEIPT_PRINTERS_STATUS_URL:-http://receipt-service:8080/printers/status}",
+                      compose)
         self.assertIn("HOME_ASSISTANT_LAUNCH_URL: ${HOME_ASSISTANT_LAUNCH_URL:-http://ha.jarvis.home/}",
                       compose)
         self.assertIn("HOME_ASSISTANT_STATUS_URL: ${HOME_ASSISTANT_STATUS_URL:-http://192.168.1.100:8123/api/}",
@@ -135,6 +139,13 @@ class ConfigTests(unittest.TestCase):
                       compose)
         self.assertIn("    external: true\n    name: jarvis-receipt-services\n", compose)
         self.assertNotIn("depends_on", compose)
+
+    def test_printer_status_url_rejects_query_strings(self):
+        with patch.dict(os.environ, {
+            "RECEIPT_PRINTERS_STATUS_URL": "http://receipt-service:8080/printers/status?x=1",
+        }, clear=True):
+            with self.assertRaises(ValueError):
+                load_config()
 
 
 if __name__ == "__main__":

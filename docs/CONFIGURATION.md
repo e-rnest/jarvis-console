@@ -12,6 +12,7 @@ browser. Other variables on this page are non-secret routing/configuration value
 | `HTTP_HOST` | `0.0.0.0` | Listener address; not otherwise validated. Compose does not pass it. |
 | `HTTP_PORT` | `8080` | Integer 1–65535; Compose fixes the container value at 8080. |
 | `STATUS_TIMEOUT_SECONDS` | `2` | Float 0.1–10, applied independently to each downstream request. |
+| `RECEIPT_PRINTERS_STATUS_URL` | `http://receipt-service:8080/printers/status` | Receipt's Hedwig and Pam status endpoint. HTTP(S), host required, no credentials/query/fragment. Read once per `/api/status` snapshot. |
 | `MORNING_BRIEF_URL` | `http://receipt-service:8080/print/morning` | HTTP(S), host required, no credentials/query/fragment. |
 | `MORNING_BRIEF_TIMEOUT_SECONDS` | `300` | Float 0.1–600. A timeout is ambiguous and never retried. |
 

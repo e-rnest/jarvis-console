@@ -98,6 +98,24 @@ configuration are external and need separate backup.
 - Account for Wallboard's known `{"ok":true}` versus `{"status":"ok"}` mismatch.
 - Do not weaken an adapter or use a homepage merely to make a badge green.
 
+### Printer chips on the Receipt card
+
+The Pam and Hedwig chips come from Receipt's `GET /printers/status`; Console
+never contacts a printer.
+
+- **Pam** shows what the printer reports: ready, paper near end, paper out,
+  cover open, an error, offline, or unreachable.
+- **Hedwig** shows reachability only. A green Hedwig chip does not mean Hedwig
+  has paper.
+- "Checked" is the time of Receipt's last real check, which runs at most once
+  per 60 seconds. Refreshing Console sooner shows the same result.
+- "Busy: check skipped" means a print job was running; the chip shows the
+  previous result.
+- "Printer status unavailable" means Console could not read or validate the
+  Receipt response (for example an older Receipt without the endpoint). It
+  says nothing about the printers.
+- Chip state never changes the Receipt badge or any container health.
+
 ### A card is `unavailable`
 
 Intentional for Home Assistant only when `HOME_ASSISTANT_TOKEN` is empty: navigation-only,

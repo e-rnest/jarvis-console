@@ -25,6 +25,8 @@ class Config:
     morning_brief_url: str
     morning_brief_timeout_seconds: float
     services: tuple[ServiceConfig, ...]
+    # Receipt Service's printer status endpoint. None disables the chips.
+    receipt_printers_url: str | None = None
 
 
 def _url(name: str, default: str) -> str:
@@ -173,4 +175,8 @@ def load_config() -> Config:
     return Config(
         os.environ.get("HTTP_HOST", "0.0.0.0"), port, timeout,
         morning_brief_url, morning_timeout, services,
+        _status_url(
+            "RECEIPT_PRINTERS_STATUS_URL",
+            "http://receipt-service:8080/printers/status",
+        ),
     )

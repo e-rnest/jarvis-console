@@ -80,7 +80,8 @@ No DNS record or proxy rule exists for Scrypted, Matter Server, or the scanners.
 | Component | Contract | What it proves | What it does not prove |
 | --- | --- | --- | --- |
 | Console | `GET /health` → HTTP 200 JSON with `status: ok` | Console process and HTTP handler respond | Any downstream service |
-| Receipt | `GET /health` accepted by the Receipt adapter | Service, scheduler state, and print-lock state | Printer reachability, paper output, or upstream content providers |
+| Receipt | `GET /health` accepted by the Receipt adapter | Service, scheduler state, and print-lock state | Printer state, paper output, or upstream content providers |
+| Receipt printers | `GET /printers/status` read through Receipt | Pam: online, paper, cover and error state as the printer reports it. Hedwig: port 9100 accepts a connection | That any receipt printed; Hedwig's paper, cover or errors; state newer than 60 seconds |
 | Label | `GET /health` → HTTP 200 JSON with `status: ok` | Flask process responds | Brother printer reachability or physical output |
 | Manifest | `GET /health` → HTTP 200 JSON with `status: ok` | Inventory application responds | Scanner process, scanner device, or queue depth |
 | Jeopardy | `GET /health` with accepted healthy response | HTTP process and readable clue corpus | Pam (receipt printer) availability |

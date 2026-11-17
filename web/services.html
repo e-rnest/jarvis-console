@@ -128,12 +128,13 @@
         <li>Joins its default network and the external <code>jarvis-receipt-services</code> network, where it has <code>receipt-service</code> and legacy <code>morning-brief</code> aliases.</li>
         <li>Uses the external <code>morning-brief_schedule-data</code> volume for durable scheduler and Telegram history state. Console mounts that volume read-only.</li>
         <li>The Console <strong>Thermal Telegram</strong> card reads the newest 50 stored entries through Console's read-only API. It cannot mutate, acknowledge, delete, decrypt, or retry messages.</li>
-        <li>Prints raw ESC/POS over TCP to Hedwig or Pam on port 9100 (the scheduled Morning Brief is routed to Hedwig, every other job to Pam). Neither printer is probed by health.</li>
+        <li>Prints raw ESC/POS over TCP to Hedwig or Pam on port 9100 (the scheduled Morning Brief is routed to Hedwig, every other job to Pam). Neither printer is probed by health. A separate status endpoint reads Pam's hardware status and Hedwig's reachability without printing.</li>
         <li>Morning Brief gathers its own weather, market, headline, daily-content, and trivia inputs; upstream failures are handled within Receipt rather than by Console.</li>
       </ul>
       <h3>Current HTTP surface</h3>
       <ul>
         <li><code>GET /health</code> — service, scheduler configuration/state, and print-lock state.</li>
+        <li><code>GET /printers/status</code> — read-only printer status, cached for 60 seconds. Pam: online, paper, cover, and error state. Hedwig: reachability only, no paper status. Shown as chips on the Console Receipt card.</li>
         <li><code>POST /print/morning</code> — deliberate Morning Brief physical print.</li>
         <li><code>POST /print/inventory</code> — inventory receipt.</li>
         <li><code>POST /print/jeopardy</code> and optional <code>?id=…</code> — Jeopardy clue receipt.</li>

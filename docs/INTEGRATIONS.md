@@ -22,6 +22,7 @@ so those paths can have different DNS and network reachability.
 | Target | Default endpoint | Accepted contract and change impact |
 | --- | --- | --- |
 | Receipt | `http://receipt-service:8080/health` | Identity `morning-brief`; strict scheduler/printing schema; HTTP 200 `ok` or HTTP 503 `degraded`. Schema/identity/alias changes produce `unknown`; supported degradation becomes `failed`. |
+| Receipt printers | `http://receipt-service:8080/printers/status` | Identity `morning-brief` with exactly one Pam and one Hedwig entry; strict field validation. Any failure or mismatch shows "Printer status unavailable" and leaves the Receipt badge alone. Pam: hardware status as reported by the printer. Hedwig: TCP reachability only, no paper status. Results can be 60 seconds old. Console never opens port 9100. |
 | Label | `http://192.168.1.100:5050/health` | HTTP 200 JSON `status: ok`. Does not prove printer health. |
 | Manifest | `http://manifest.home/health` | HTTP 200 JSON `status: ok`. Does not cover scanner or queue health. |
 | Jeopardy | `http://jeopardy-service:8080/health` | HTTP 200 `status: ok`; HTTP 503 `error: corpus unavailable` is known `failed`. Other shape changes produce `unknown`. |

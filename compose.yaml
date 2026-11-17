@@ -18,6 +18,7 @@ services:
       HOME_ASSISTANT_SHORT_URL: ${HOME_ASSISTANT_SHORT_URL:-http://ha.home/}
       HOME_ASSISTANT_DIRECT_URL: ${HOME_ASSISTANT_DIRECT_URL:-http://192.168.1.100:8123/}
       RECEIPT_STATUS_URL: ${RECEIPT_STATUS_URL:-http://receipt-service:8080/health}
+      RECEIPT_PRINTERS_STATUS_URL: ${RECEIPT_PRINTERS_STATUS_URL:-http://receipt-service:8080/printers/status}
       RECEIPT_REPOSITORY_URL: ${RECEIPT_REPOSITORY_URL:-https://github.com/e-rnest/receipt-service}
       LABEL_STATUS_URL: ${LABEL_STATUS_URL:-http://192.168.1.100:5050/health}
       LABEL_LAUNCH_URL: ${LABEL_LAUNCH_URL:-http://label.jarvis.home/print}
