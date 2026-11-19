@@ -574,7 +574,7 @@ class PrinterAggregationTests(unittest.TestCase):
         script = (ROOT / "web/app.js").read_text()
         styles = (ROOT / "web/app.css").read_text()
         self.assertIn("function renderPrinters(printers)", script)
-        self.assertIn("card.append(renderPrinters(service.printers))", script)
+        self.assertIn("nodes.push(renderPrinters(service.printers))", script)
         self.assertIn("printer.note", script)
         self.assertIn("Checked ${", script)
         self.assertIn("Not checked yet", script)
@@ -609,7 +609,7 @@ class ConsoleHTTPTests(unittest.TestCase):
         self.assertEqual(payload["status"], "ok")
         self.assertEqual(payload["service"], "jarvis-console")
         self.assertEqual(payload["version"], "1.1.0")
-        self.assertEqual(payload["build"], "2026.11.16.1")
+        self.assertEqual(payload["build"], "2026.11.18.1")
 
     def test_status_api_does_not_leak_internal_targets(self):
         with fake_downstreams(healthy_responses()) as (base, _):
@@ -624,8 +624,26 @@ class ConsoleHTTPTests(unittest.TestCase):
         self.assertIn("http://launch/trivia", body)
         payload = json.loads(body)
         self.assertEqual(payload["console"], {
-            "version": "1.1.0", "build": "2026.11.16.1",
+            "version": "1.1.0", "build": "2026.11.18.1",
         })
+
+    def test_services_catalog_makes_no_downstream_requests(self):
+        with fake_downstreams(healthy_responses()) as (base, downstream):
+            config = configuration(base)
+            with self.console(config) as console:
+                with urlopen(console + "/api/services", timeout=2) as response:
+                    body = response.read().decode()
+            self.assertEqual(downstream.get_headers, [])
+        self.assertNotIn(base, body)
+        self.assertNotIn("test-home-assistant-token", body)
+        services = by_key(json.loads(body))
+        self.assertEqual(list(services), [s.key for s in config.services])
+        self.assertEqual({s["status"] for s in services.values()}, {"checking"})
+        self.assertEqual(services["label"]["launch_url"], "http://launch/label")
+        self.assertIsNone(services["receipt"]["launch_url"])
+        self.assertEqual(services["jellyfin"]["secondary_links"], [
+            {"label": "TV Guide", "url": "http://launch/jellyfin/tv"},
+        ])
 
     def test_static_page_has_required_structure_and_no_internal_hostnames(self):
         html = (ROOT / "web/index.html").read_text()
@@ -640,16 +658,13 @@ class ConsoleHTTPTests(unittest.TestCase):
         self.assertIn("Jarvis Console v${snapshot.console.version}", script)
         self.assertIn('fetch("/api/actions/morning-brief"', script)
         self.assertIn("Print Morning Brief", script)
-        self.assertIn('"Receipt Service"', script)
+        self.assertIn('fetch("/api/services"', script)
         self.assertIn("produce physical paper output", script)
         self.assertIn("button.disabled = true", script)
         self.assertIn("button.disabled = false", script)
         self.assertIn('addDetail(details, "Datasets"', script)
         self.assertNotIn('addDetail(details, "Packs"', script)
         self.assertIn('if (service.key === "receipt")', script)
-        self.assertIn('"BlackTorrent"', script)
-        self.assertIn('"Home Assistant"', script)
-        self.assertIn('"Manifest"', script)
         self.assertIn('"card-actions"', script)
         self.assertIn("service.secondary_links", script)
         self.assertIn("@media (max-width: 620px)", styles)

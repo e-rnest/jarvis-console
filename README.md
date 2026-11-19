@@ -29,7 +29,7 @@ or device was live at audit time.
 - Proxies exactly one Morning Brief request at a time, with no automatic retry and
   explicit `success`, `failed`, `busy`, and `uncertain` outcomes.
 - Serves the hand-maintained `/services` ecosystem catalog alongside the dashboard.
-- Displays backend version `1.1.0` and build `2026.11.16.1` in the dashboard footer.
+- Displays backend version `1.1.0` and build `2026.11.18.1` in the dashboard footer.
 - Uses only Python 3.12's standard library plus static HTML, CSS, and JavaScript.
 
 ## Access

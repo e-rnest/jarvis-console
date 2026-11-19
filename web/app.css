@@ -141,6 +141,10 @@ h1 {
 .badge.failed { color: var(--failed); background: color-mix(in srgb, var(--failed) 11%, transparent); }
 .badge.unknown { color: var(--unknown); background: color-mix(in srgb, var(--unknown) 12%, transparent); }
 .badge.unavailable { color: var(--unavailable); background: color-mix(in srgb, var(--unavailable) 11%, transparent); }
+.badge.checking { color: var(--unavailable); background: color-mix(in srgb, var(--unavailable) 11%, transparent); }
+.badge.checking::before { animation: badge-pulse 1.2s ease-in-out infinite; }
+@keyframes badge-pulse { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .badge.checking::before { animation: none; } }
 
 .summary {
   margin: .72rem 0 1rem;

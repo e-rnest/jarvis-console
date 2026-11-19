@@ -47,17 +47,17 @@ function renderPrinters(printers) {
   return row;
 }
 
-function renderCard(service) {
+// Cards are built once from the catalog so Launch, Print and View Log work
+// immediately. Health results only update the badge, summary and details.
+function buildCard(service) {
   const card = element("article", `card ${service.key}`);
+  card.dataset.key = service.key;
   const top = element("div", "card-top");
-  top.append(
-    element("h2", "", service.name),
-    element("span", `badge ${service.status}`, service.status),
-  );
-  card.append(top, element("p", "summary", service.summary));
+  top.append(element("h2", "", service.name), element("span", "badge"));
+  card.append(top, element("p", "summary"), element("div", "card-status"));
 
+  const actions = element("div", "card-actions");
   if (service.key === "ipps") {
-    const actions = element("div", "card-actions");
     const viewLog = element("button", "print-button", "View Log");
     viewLog.type = "button";
     viewLog.addEventListener("click", openIppsLog);
@@ -65,13 +65,49 @@ function renderCard(service) {
     card.append(actions);
     return card;
   }
-
-  if (service.key === "receipt" && service.printers !== undefined) {
-    card.append(renderPrinters(service.printers));
+  if (service.key === "receipt") {
+    const action = element("button", "print-button", "Print Morning Brief");
+    action.type = "button";
+    const actionResult = element("p", "action-result");
+    action.addEventListener("click", () => printMorningBrief(action, actionResult));
+    actions.append(action);
+    appendSecondaryLinks(actions, service);
+    card.append(actions, actionResult);
+    return card;
   }
+  if (service.launch_url) {
+    const launch = element("a", "launch", "Launch");
+    launch.href = service.launch_url;
+    actions.append(launch);
+  }
+  appendSecondaryLinks(actions, service);
+  card.append(actions);
+  return card;
+}
 
+function appendSecondaryLinks(actions, service) {
+  for (const link of service.secondary_links || []) {
+    const secondary = element("a", "launch secondary", link.label);
+    secondary.href = link.url;
+    actions.append(secondary);
+  }
+}
+
+function updateCard(card, service) {
+  const badge = card.querySelector(".badge");
+  badge.className = `badge ${service.status}`;
+  badge.textContent = service.status;
+  card.querySelector(".summary").textContent = service.summary;
+  card.querySelector(".card-status").replaceChildren(...renderStatusDetails(service));
+}
+
+function renderStatusDetails(service) {
+  const nodes = [];
+  if (service.key === "receipt" && service.printers !== undefined) {
+    nodes.push(renderPrinters(service.printers));
+  }
+  const details = element("dl", "details");
   if (service.key === "receipt" && service.details) {
-    const details = element("dl", "details");
     addDetail(details, "Schedule", service.details.schedule_enabled ? "Enabled" : "Disabled");
     addDetail(details, "Morning brief", service.details.morning_time);
     addDetail(details, "Timezone", service.details.timezone);
@@ -81,52 +117,44 @@ function renderCard(service) {
     if (service.details.scheduler_error) {
       addDetail(details, "Scheduler error", service.details.scheduler_error, true);
     }
-    card.append(details);
   } else if (service.key === "triviarom" && service.details) {
-    const details = element("dl", "details");
     addDetail(details, "Playable", service.details.playable_record_count.toLocaleString());
     addDetail(details, "Archive", service.details.record_count.toLocaleString());
     addDetail(details, "Datasets", service.details.dataset_count.toLocaleString());
-    card.append(details);
   } else if (service.key === "jellyfin" && service.details) {
-    const details = element("dl", "details");
     addDetail(details, "Server", service.details.server_name);
     addDetail(details, "Version", service.details.version);
-    card.append(details);
   } else if (service.key === "semavox" && service.details) {
-    const details = element("dl", "details");
     addDetail(details, "Uptime", `${service.details.uptime_seconds.toLocaleString()} sec`);
     addDetail(details, "Audio", service.details.audio_ready ? "Ready" : "Unavailable");
     addDetail(details, "Volume", `${service.details.volume_percent}%`);
-    card.append(details);
   }
+  if (details.childElementCount) nodes.push(details);
+  return nodes;
+}
 
-  if (service.key === "receipt") {
-    const actions = element("div", "card-actions");
-    const action = element("button", "print-button", "Print Morning Brief");
-    action.type = "button";
-    const actionResult = element("p", "action-result");
-    action.addEventListener("click", () => printMorningBrief(action, actionResult));
-    actions.append(action);
-    for (const link of service.secondary_links || []) {
-      const secondary = element("a", "launch secondary", link.label);
-      secondary.href = link.url;
-      actions.append(secondary);
+// Thermal Telegram has no health check of its own; it follows Receipt.
+function withTelegramCard(list) {
+  return list.flatMap(service => {
+    if (service.key !== "receipt") return [service];
+    return [service, {
+      key: "ipps",
+      name: "Thermal Telegram",
+      status: service.status,
+      summary: "Encrypted telegram delivery and persistent message history",
+    }];
+  });
+}
+
+function showServices(list) {
+  for (const service of withTelegramCard(list)) {
+    let card = services.querySelector(`[data-key="${service.key}"]`);
+    if (!card) {
+      card = buildCard(service);
+      services.append(card);
     }
-    card.append(actions, actionResult);
-  } else {
-    const actions = element("div", "card-actions");
-    const launch = element("a", "launch", "Launch");
-    launch.href = service.launch_url;
-    actions.append(launch);
-    for (const link of service.secondary_links || []) {
-      const secondary = element("a", "launch secondary", link.label);
-      secondary.href = link.url;
-      actions.append(secondary);
-    }
-    card.append(actions);
+    updateCard(card, service);
   }
-  return card;
 }
 
 async function printMorningBrief(button, output) {
@@ -185,20 +213,31 @@ async function openIppsLog() {
   }
 }
 
-function showLoadingCards() {
-  services.replaceChildren();
-  for (const name of [
-    "Home Assistant", "Receipt Service", "Thermal Telegram", "Label", "Manifest", "Jeopardy", "TriviaROM", "Wallboard", "BlackTorrent", "Jellyfin", "Semavox",
-  ]) {
-    const card = element("article", "card");
-    card.append(element("h2", "", name), element("p", "summary", "Checking status…"));
-    services.append(card);
+async function loadCatalog() {
+  try {
+    const response = await fetch("/api/services", { cache: "no-store" });
+    if (!response.ok) return;
+    const catalog = await response.json();
+    // A status snapshot may already have built the cards; don't regress badges.
+    if (Array.isArray(catalog.services) && !services.childElementCount) {
+      showServices(catalog.services);
+    }
+  } catch (error) {
+    // Cards are still built when the status snapshot arrives.
+  }
+}
+
+function markStatusFailed() {
+  for (const badge of services.querySelectorAll(".badge.checking")) {
+    badge.className = "badge unknown";
+    badge.textContent = "unknown";
+    badge.closest(".card").querySelector(".summary").textContent = "Status check did not complete";
   }
 }
 
 async function refresh() {
   refreshButton.disabled = true;
-  refreshState.textContent = "Refreshing…";
+  refreshState.textContent = "Checking status…";
   try {
     const response = await fetch("/api/status", { cache: "no-store" });
     if (!response.ok) throw new Error(`Console returned HTTP ${response.status}`);
@@ -210,21 +249,11 @@ async function refresh() {
     } else {
       consoleBuild.textContent = "Jarvis Console build unavailable";
     }
-    const receipt = snapshot.services.find(service => service.key === "receipt");
-    const cards = snapshot.services.flatMap(service => {
-      if (service.key !== "receipt") return [service];
-      const ipps = {
-        key: "ipps",
-        name: "Thermal Telegram",
-        status: service.status,
-        summary: "Encrypted telegram delivery and persistent message history",
-      };
-      return [service, ipps];
-    });
-    services.replaceChildren(...cards.map(renderCard));
+    showServices(snapshot.services);
     const completed = new Date(snapshot.generated_at);
     refreshState.textContent = `Last refreshed ${completed.toLocaleString()}`;
   } catch (error) {
+    markStatusFailed();
     refreshState.textContent = `Refresh failed: ${error.message}`;
   } finally {
     refreshButton.disabled = false;
@@ -232,5 +261,5 @@ async function refresh() {
 }
 
 refreshButton.addEventListener("click", refresh);
-showLoadingCards();
+loadCatalog();
 refresh();

@@ -13,7 +13,18 @@ not implemented by the handler.
 Process health only; it does not query downstreams.
 
 ```json
-{"status":"ok","service":"jarvis-console","version":"1.1.0","build":"2026.11.16.1"}
+{"status":"ok","service":"jarvis-console","version":"1.1.0","build":"2026.11.18.1"}
+```
+
+## `GET /api/services`
+
+Card catalog only; it does not query downstreams, so the dashboard can render every card
+and its Launch links immediately. Same service shape as `/api/status`, with `status`
+`checking` (or `unavailable` when no status URL is configured) and no `details`.
+
+```json
+{"services": [{"key":"label","name":"Label","status":"checking",
+  "summary":"Checking status…","launch_url":"http://label.jarvis.home/print"}]}
 ```
 
 ## `GET /api/status`
@@ -25,7 +36,7 @@ returns HTTP 200 even when individual services are failed, unknown, or unavailab
 ```json
 {
   "generated_at": "2026-11-06T20:00:00+00:00",
-  "console": {"version":"1.1.0","build":"2026.11.16.1"},
+  "console": {"version":"1.1.0","build":"2026.11.18.1"},
   "services": [{
     "key": "label",
     "name": "Label",

@@ -42,6 +42,23 @@ def _with_secondary_links(config: ServiceConfig, service: dict) -> dict:
     return service
 
 
+def catalog(config: Config) -> dict:
+    """Every card's name and links, with no downstream requests.
+
+    The page renders this first so Launch links work while health checks run.
+    """
+    return {"services": [
+        _with_secondary_links(service, result(
+            service.key, service.name,
+            "checking" if service.status_url is not None else "unavailable",
+            "Checking status\u2026" if service.status_url is not None
+            else "Health status is not available",
+            service.launch_url,
+        ))
+        for service in config.services
+    ]}
+
+
 def aggregate(config: Config) -> dict:
     services: dict[str, dict] = {}
     checked = [service for service in config.services if service.status_url is not None]

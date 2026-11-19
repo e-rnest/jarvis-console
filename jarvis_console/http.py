@@ -13,7 +13,7 @@ from urllib.parse import urlsplit
 from . import __build__, __version__
 from .actions import MorningBriefAction
 from .config import Config
-from .status import aggregate
+from .status import aggregate, catalog
 
 LOG = logging.getLogger(__name__)
 IPPS_HISTORY_DB = Path("/receipt-data/telegram_history.sqlite3")
@@ -107,6 +107,8 @@ class ConsoleHandler(BaseHTTPRequestHandler):
                 LOG.exception("ipps_history_unavailable")
                 self._json(HTTPStatus.SERVICE_UNAVAILABLE,
                            {"error": "Message history unavailable"})
+        elif url.path == "/api/services":
+            self._json(HTTPStatus.OK, catalog(self.server.config))
         elif url.path == "/api/status":
             payload = aggregate(self.server.config)
             payload["console"] = {"version": __version__, "build": __build__}
