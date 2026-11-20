@@ -147,14 +147,120 @@ function withTelegramCard(list) {
 }
 
 function showServices(list) {
+  let added = false;
   for (const service of withTelegramCard(list)) {
     let card = services.querySelector(`[data-key="${service.key}"]`);
     if (!card) {
       card = buildCard(service);
+      makeDraggable(card);
       services.append(card);
+      added = true;
     }
     updateCard(card, service);
   }
+  if (added) applyCardOrder();
+}
+
+// Card order: desktop-only drag and drop, remembered per browser. Nothing is
+// written to the server. Keys missing from the saved order (new services)
+// fall back to the default rank, then catalog order.
+const DEFAULT_CARD_ORDER = [
+  "homeassistant", "semavox",
+  "manifest", "wallboard",
+  "jellyfin", "blacktorrent",
+  "receipt", "ipps", "label",
+];
+const CARD_ORDER_KEY = "jarvis.cardOrder";
+const canDrag = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+const resetOrderButton = document.querySelector("#reset-order");
+let draggedCard = null;
+
+function savedCardOrder() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CARD_ORDER_KEY));
+    return Array.isArray(saved) ? saved.filter(key => typeof key === "string") : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function saveCardOrder() {
+  const keys = [...services.children].map(card => card.dataset.key);
+  try {
+    localStorage.setItem(CARD_ORDER_KEY, JSON.stringify(keys));
+  } catch (error) {
+    // Private mode or blocked storage: the order lasts until reload.
+  }
+  updateResetButton();
+}
+
+function applyCardOrder() {
+  const saved = savedCardOrder() || [];
+  const rank = key => {
+    const savedIndex = saved.indexOf(key);
+    if (savedIndex !== -1) return savedIndex;
+    const defaultIndex = DEFAULT_CARD_ORDER.indexOf(key);
+    return saved.length + (defaultIndex !== -1 ? defaultIndex : DEFAULT_CARD_ORDER.length);
+  };
+  const cards = [...services.children];
+  const catalogIndex = new Map(cards.map((card, index) => [card, index]));
+  cards.sort((a, b) => rank(a.dataset.key) - rank(b.dataset.key)
+    || catalogIndex.get(a) - catalogIndex.get(b));
+  services.append(...cards);
+  updateResetButton();
+}
+
+function updateResetButton() {
+  if (resetOrderButton) resetOrderButton.hidden = !canDrag || !savedCardOrder();
+}
+
+function makeDraggable(card) {
+  if (!canDrag) return;
+  card.draggable = true;
+  card.addEventListener("dragstart", event => {
+    // Let links and buttons inside the card keep their own drag behaviour.
+    if (event.target !== card) return;
+    draggedCard = card;
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", card.dataset.key);
+    requestAnimationFrame(() => card.classList.add("dragging"));
+  });
+  card.addEventListener("dragend", () => {
+    card.classList.remove("dragging");
+    if (draggedCard) saveCardOrder();
+    draggedCard = null;
+  });
+}
+
+services.addEventListener("dragover", event => {
+  if (!draggedCard) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+  const target = event.target.closest(".card");
+  if (!target || target === draggedCard) return;
+  const rect = target.getBoundingClientRect();
+  // Side-by-side cards split left/right; full-width cards split top/bottom.
+  const fullWidth = rect.width > services.getBoundingClientRect().width * 0.75;
+  const before = fullWidth
+    ? event.clientY < rect.top + rect.height / 2
+    : event.clientX < rect.left + rect.width / 2;
+  const reference = before ? target : target.nextElementSibling;
+  if (reference !== draggedCard) services.insertBefore(draggedCard, reference);
+});
+
+services.addEventListener("drop", event => {
+  if (draggedCard) event.preventDefault();
+});
+
+if (resetOrderButton) {
+  resetOrderButton.addEventListener("click", () => {
+    try {
+      localStorage.removeItem(CARD_ORDER_KEY);
+    } catch (error) {
+      // Nothing saved to clear.
+    }
+    applyCardOrder();
+  });
 }
 
 async function printMorningBrief(button, output) {
